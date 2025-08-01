@@ -222,51 +222,43 @@ const SearchResultsPage = () => {
         }
     }, [location.search]);
 
-    const fetchSearchResults = async (query) => {
-        setLoading(true);
-        try {
-            const userId = '123';
-            const { data } = await axios.get(`http://localhost:8000/search?q=${query}&userId=${userId}`);
-            
-            // Get full product details for each search result
-            const detailedProducts = await Promise.all(
-                data.map(async (item) => {
-                    try {
-                        const productResponse = await axios.get(`http://localhost:8000/product/${item.id}`);
-                        return productResponse.data;
-                    } catch (error) {
-                        console.error(`Error fetching product ${item.id}:`, error);
-                        return null;
-                    }
-                })
-            );
+   const fetchSearchResults = async (query) => {
+    setLoading(true);
+    try {
+        // This user ID is hardcoded in your original file, keeping it for consistency.
+        const userId = '123'; 
+        const { data } = await axios.get(`http://localhost:8000/search?q=${query}&userId=${userId}`);
+        
+        // The 'data' variable now contains the final array of full product objects.
+        // We can use it directly.
+        const validProducts = data.filter(product => product !== null);
 
-            const validProducts = detailedProducts.filter(product => product !== null);
-            setProducts(validProducts);
-            setFilteredProducts(validProducts);
+        setProducts(validProducts);
+        setFilteredProducts(validProducts);
 
-            // Extract unique brands and categories
-            const brands = [...new Set(validProducts.map(p => p.brand).filter(Boolean))];
-            const categories = [...new Set(validProducts.map(p => p.category).filter(Boolean))];
-            setAvailableBrands(brands);
-            setAvailableCategories(categories);
+        // Extract unique brands and categories from the results
+        const brands = [...new Set(validProducts.map(p => p.brand).filter(Boolean))];
+        const categories = [...new Set(validProducts.map(p => p.category).filter(Boolean))];
+        setAvailableBrands(brands);
+        setAvailableCategories(categories);
 
-            // Set price range based on products
-            const prices = validProducts.map(p => p.price?.cost || 0).filter(p => p > 0);
-            if (prices.length > 0) {
-                const minPrice = Math.min(...prices);
-                const maxPrice = Math.max(...prices);
-                setPriceRange([minPrice, maxPrice]);
-            }
-
-        } catch (error) {
-            console.error('Error fetching search results:', error);
-            setProducts([]);
-            setFilteredProducts([]);
-        } finally {
-            setLoading(false);
+        // Set price range based on products
+        const prices = validProducts.map(p => p.price?.cost || 0).filter(p => p > 0);
+        if (prices.length > 0) {
+            const minPrice = Math.floor(Math.min(...prices));
+            const maxPrice = Math.ceil(Math.max(...prices));
+            // Ensure min is not greater than max
+            setPriceRange([minPrice > maxPrice ? maxPrice : minPrice, maxPrice]);
         }
-    };
+
+    } catch (error) {
+        console.error('Error fetching search results:', error);
+        setProducts([]);
+        setFilteredProducts([]);
+    } finally {
+        setLoading(false);
+    }
+};
 
     // Apply filters whenever filter states change
     useEffect(() => {

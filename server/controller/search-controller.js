@@ -3,6 +3,7 @@ import Category from '../model/categorySchema.js';
 import { esClient } from '../index.js';
 import { updateUserProfile, getUserProfile, redisClient } from '../database/redis.js';
 import { expandQueryWithAbbreviations } from '../constants/abbreviations.js';
+import axios from 'axios'; // <-- Make sure to import axios
 
 const indexName = 'products';
 
@@ -13,169 +14,54 @@ function escapeRegex(text) {
 
 // --- Personalized Search Controller: Returns ranked products + category suggestions ---
 export const personalizedSearch = async (req, res) => {
-    const { q: searchQuery, userId } = req.query;
+    const { q: searchQuery } = req.query;
     if (!searchQuery) {
         return res.status(400).send('Query "q" is required.');
     }
 
-    // NEW: Expand abbreviations for search
-    const expandedQuery = expandQueryWithAbbreviations(searchQuery);
-    const finalSearchQuery = expandedQuery !== searchQuery ? expandedQuery : searchQuery;
-
-    // UserId is optional; if missing, proceed without personalization
-    let boostProducts = [];
     try {
-        if (userId) {
-            const profile = await getUserProfile(userId);
-            boostProducts = profile?.clicked_products || [];
-        }
-    } catch (redisError) {
-        console.error('Redis error in personalizedSearch:', redisError);
-        // Continue without boosting
-    }
+        // 1. Call the SRP service to get ranked product IDs
+        console.log(`[Node Server] Calling SRP service for query: "${searchQuery}"`);
+        const srpResponse = await axios.post('http://localhost:8001/api/search', {
+            query: searchQuery
+        });
 
-    try {
-        let productResults = [];
-        let categorySuggestions = [];
+        const ranked_ids = srpResponse.data.ranked_ids;
 
-        // --- Product Search: Elasticsearch, Fallback to Mongo ---
-        try {
-            // ES - match on product name + category, allow typos, with boosting and highlighting
-            const { hits } = await esClient.search({
-                index: indexName,
-                query: {
-                    bool: {  // Use bool for boosting
-                        should: [
-                            {
-                                multi_match: {
-                                    query: finalSearchQuery, // Use expanded query
-                                    fields: ['name^2', 'name._2gram', 'name._3gram', 'category'],
-                                    fuzziness: 'AUTO',
-                                    type: 'best_fields'
-                                }
-                            },
-                            {
-                                multi_match: {
-                                    query: searchQuery, // Also search original query
-                                    fields: ['name^2', 'name._2gram', 'name._3gram', 'category'],
-                                    fuzziness: 'AUTO',
-                                    type: 'best_fields'
-                                }
-                            },
-                            {
-                                terms: { _id: boostProducts } // Boost user's clicked products
-                            }
-                        ]
-                    }
-                },
-                highlight: {
-                    fields: {
-                        name: { pre_tags: ['<strong>'], post_tags: ['</strong>'] },
-                        category: { pre_tags: ['<strong>'], post_tags: ['</strong>'] }
-                    }
-                },
-                sort: [{ rating: { order: 'desc' } }, '_score'], // Sort by rating + relevance
-                size: 20
-            });
-            productResults = hits.hits.map(hit => ({
-                id: hit._id,
-                title: {
-                    longTitle: hit.highlight?.name?.[0] || hit._source.name, // Highlighted
-                    shortTitle: hit.highlight?.category?.[0] || hit._source.category
-                },
-                score: hit._score,
-                rating: hit._source.rating,
-                type: 'product'
-            }));
-        } catch (esError) {
-            console.error('ES error in personalizedSearch:', esError);
-            // Mongo Fallback (case-insensitive substring, with basic boosting)
-            try {
-                const escapedOriginalQuery = escapeRegex(searchQuery);
-                const escapedExpandedQuery = escapeRegex(finalSearchQuery);
-                
-                let products = await Product.find({
-                    $or: [
-                        { 'title.longTitle': { $regex: escapedExpandedQuery, $options: 'i' } },
-                        { 'title.shortTitle': { $regex: escapedExpandedQuery, $options: 'i' } },
-                        { description: { $regex: escapedExpandedQuery, $options: 'i' } },
-                        { 'title.longTitle': { $regex: escapedOriginalQuery, $options: 'i' } },
-                        { 'title.shortTitle': { $regex: escapedOriginalQuery, $options: 'i' } },
-                        { description: { $regex: escapedOriginalQuery, $options: 'i' } }
-                    ]
-                }).sort({ rating: -1 }).limit(20); // Sort by rating descending
-
-                // Basic boosting: Move clicked products to top
-                products = products.sort((a, b) => 
-                    (boostProducts.includes(b._id.toString()) ? 1 : 0) - (boostProducts.includes(a._id.toString()) ? 1 : 0)
-                );
-
-                // Pseudo-highlighting: Wrap matched terms
-                productResults = products.map(product => {
-                    const longTitle = product.title.longTitle
-                        .replace(new RegExp(escapedExpandedQuery, 'gi'), match => `<strong>${match}</strong>`)
-                        .replace(new RegExp(escapedOriginalQuery, 'gi'), match => `<strong>${match}</strong>`);
-                    const shortTitle = product.title.shortTitle
-                        .replace(new RegExp(escapedExpandedQuery, 'gi'), match => `<strong>${match}</strong>`)
-                        .replace(new RegExp(escapedOriginalQuery, 'gi'), match => `<strong>${match}</strong>`);
-                    return {
-                        id: product._id.toString(),
-                        title: { longTitle, shortTitle },
-                        rating: product.rating,
-                        type: 'product'
-                    };
-                });
-            } catch (mongoError) {
-                console.error('Mongo fallback error in personalizedSearch:', mongoError);
-                productResults = []; // Graceful fallback: empty results
-            }
+        if (!ranked_ids || ranked_ids.length === 0) {
+            return res.json([]); // Return empty if SRP found no results
         }
 
-        // --- Category/Subcategory Suggestions (de-duped, both fields) ---
-        try {
-            const escapedOriginalQuery = escapeRegex(searchQuery);
-            const escapedExpandedQuery = escapeRegex(finalSearchQuery);
-            
-            const catMatches = await Category.find({
-                $or: [
-                    { category: { $regex: escapedExpandedQuery, $options: 'i' } },
-                    { subcategory: { $regex: escapedExpandedQuery, $options: 'i' } },
-                    { category: { $regex: escapedOriginalQuery, $options: 'i' } },
-                    { subcategory: { $regex: escapedOriginalQuery, $options: 'i' } }
-                ]
-            }).limit(10);
-            const catSet = new Set();
-            catMatches.forEach(c => {
-                if (c.category && (c.category.toLowerCase().includes(finalSearchQuery.toLowerCase()) || c.category.toLowerCase().includes(searchQuery.toLowerCase())))
-                    catSet.add(JSON.stringify({ type: 'category', name: c.category }));
-                if (c.subcategory && (c.subcategory.toLowerCase().includes(finalSearchQuery.toLowerCase()) || c.subcategory.toLowerCase().includes(searchQuery.toLowerCase())))
-                    catSet.add(JSON.stringify({ type: 'subcategory', name: c.subcategory }));
-            });
-            let categories = Array.from(catSet).map(s => JSON.parse(s));
+        console.log(`[Node Server] Received ${ranked_ids.length} ranked IDs from SRP.`);
 
-            // Sort by exact match and limit to top 5 for full search
-            categories = categories.sort((a, b) => {
-                const aMatchOriginal = a.name.toLowerCase() === searchQuery.toLowerCase() ? 1 : 0;
-                const bMatchOriginal = b.name.toLowerCase() === searchQuery.toLowerCase() ? 1 : 0;
-                const aMatchExpanded = a.name.toLowerCase() === finalSearchQuery.toLowerCase() ? 1 : 0;
-                const bMatchExpanded = b.name.toLowerCase() === finalSearchQuery.toLowerCase() ? 1 : 0;
-                return (bMatchOriginal + bMatchExpanded) - (aMatchOriginal + aMatchExpanded);
-            }).slice(0, 5);
+        // 2. Fetch full product details from MongoDB for the ranked IDs
+        const products = await Product.find({ id: { $in: ranked_ids } });
 
-            categorySuggestions = categories;
-        } catch (mongoError) {
-            console.error('Mongo category error in personalizedSearch:', mongoError);
-            categorySuggestions = []; // Graceful fallback
-        }
+        // 3. Create a map for quick lookup to preserve the order from SRP
+        const productMap = new Map();
+        products.forEach(product => {
+            // Use 'id' field which corresponds to 'pid' from your CSV
+            productMap.set(product.id, product);
+        });
 
-        // --- Compose: category suggestions on top, then product results ---
-        const combinedResults = [...categorySuggestions, ...productResults].slice(0, 20);
-        res.json(combinedResults);
+        // 4. Re-sort the fetched products based on the SRP's ranking
+        const sortedProducts = ranked_ids
+            .map(id => productMap.get(id))
+            .filter(product => product !== undefined); // Filter out any products not found in DB
+
+        console.log(`[Node Server] Returning ${sortedProducts.length} full product objects to client.`);
+        
+        // 5. Respond to the client
+        res.json(sortedProducts);
+
     } catch (error) {
-        console.error('Search controller error:', error);
-        res.status(500).json({ error: 'Something went wrong during search.' });
+        console.error('Error in personalizedSearch calling SRP service:', error.response ? error.response.data : error.message);
+        // Implement a fallback to your old search logic if you want
+        // For now, we just return an error
+        res.status(500).json({ error: 'Failed to retrieve search results.' });
     }
 };
+
 
 // --- Click Tracking for personalization ---
 export const trackClick = async (req, res) => {

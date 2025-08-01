@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile
     container_name: flipkart_srp_api
     ports:
-      - "8000:8000"
+      - "8001:8000"
     volumes:
       - chroma_db_data:/app/db_storage
     restart: unless-stopped
