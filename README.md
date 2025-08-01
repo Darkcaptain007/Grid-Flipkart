@@ -1,413 +1,212 @@
 
-# Flipkart Grid Final Submission
+# Flipkart Grid Search: AI-Powered Semantic Search Engine 🚀
 
-A scalable, personalized search and recommendation engine built for Flipkart, featuring intelligent autosuggest, abbreviation expansion, real-time personalization, and advanced scoring algorithms.
+![Status](https://img.shields.io/badge/status-production_ready-green)
+![React](https://img.shields.io/badge/React-17.0.2-blue?logo=react)
+![Node.js](https://img.shields.io/badge/Node.js-16.x-green?logo=node.js)
+![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python)
+![MongoDB](https://img.shields.io/badge/MongoDB-5.x-green?logo=mongodb)
+![Elasticsearch](https://img.shields.io/badge/Elasticsearch-7.x-blue?logo=elasticsearch)
+![Redis](https://img.shields.io/badge/Redis-6.x-red?logo=redis)
+
+This repository delivers an enterprise-grade, AI-powered personalized e-commerce search engine. It moves beyond simple keyword matching to **understand user intent**, delivering a hyper-relevant, intelligent, and incredibly fast shopping experience modeled after Flipkart's advanced search capabilities.
 
 -----
 
 ## 🌟 Key Features
 
-  * **🎯 Intelligent Search System**
+| Feature                          | Description                                                                                                                                                             |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ✅ **Semantic Search Pipeline (SRP)** | A Python microservice using ML models to understand the *meaning* behind a query, not just the words. Handles typos and finds related products effortlessly.       |
+| ✅ **Intent Classification**     | Before searching, the SRP classifies your query (e.g., "cheap running shoes") into a product category ("Men's Sports Shoes") for laser-focused results.                  |
+| ✅ **Intelligent Autosuggest**   | A hybrid system using Elasticsearch provides instant suggestions for products, categories, *and* specific search phrases (e.g., "top load washing machine").           |
+| ✅ **Real-Time Personalization** | Using Redis, the engine tracks user clicks on products and categories to boost their rankings in subsequent searches and suggestions, all in real-time.                 |
+| ✅ **Abbreviation Expansion**    | Automatically expands common e-commerce shorthand (e.g., "tv" -> "Televisions", "ac" -> "Air Conditioners") for both search and autosuggest, improving accuracy. |
+| ✅ **Robust Microservice Arch.**   | A decoupled frontend, Node.js gateway, and Python ML service make the system scalable, maintainable, and resilient.                                                   |
+| ✅ **Advanced Filtering & UI**   | A fast, responsive React/Material-UI frontend with comprehensive filters for price, brand, category, and rating, enabling users to drill down to what they need.       |
 
-      * **Multi-Engine Architecture**: Elasticsearch with MongoDB fallback for 99.9% uptime.
-      * **Fuzzy Search**: Handles typos and misspellings with auto-correction.
-      * **N-gram Analysis**: Advanced tokenization for better phrase matching.
-      * **Hybrid Scoring**: Combines relevance, rating, and personalization scores.
-
-  * **🧠 Smart Autosuggest**
-
-      * **Prefix-Priority Matching**: "s" → "Shoes" (not "Computers").
-      * **Real-time Suggestions**: Sub-200ms response time with caching.
-      * **Abbreviation Expansion**: "tv" → "Televisions", "ac" → "Air Conditioners".
-      * **Category & Product Suggestions**: Mixed result types for better UX.
-
-  * **🎨 Advanced Personalization**
-
-      * **Click Tracking**: Redis-powered real-time user behavior analysis.
-      * **Behavioral Scoring**: Recent interactions boost search rankings.
-      * **Category Preferences**: Auto-learns from a user's Browse patterns.
-      * **Privacy-First**: All data is anonymized and user-controlled.
-
-  * **⚡ Performance & Scalability**
-
-      * **Multi-Database Architecture**: Elasticsearch + MongoDB + Redis.
-      * **Query Caching**: LRU cache with 400ms debounce.
-      * **Lazy Loading**: Efficient data fetching strategies.
-      * **Horizontal Scaling**: Ready for microservices deployment.
 
 -----
-
 ## 🏗️ System Architecture
+
+Our architecture is a carefully orchestrated dance between specialized services, ensuring both speed and intelligence. The Node.js server acts as the central gateway, delegating tasks to the optimal engine for the job.
 
 ```mermaid
 graph TB
-    subgraph "Frontend Layer"
-        A[React Search Component]
-        B[Autosuggest UI]
-        C[Search Results Page]
+    subgraph " "
+        direction LR
+        subgraph "Client Layer"
+            A[<img src='https://www.vectorlogo.zone/logos/reactjs/reactjs-icon.svg' width='30' /><br>React Frontend]
+        end
+        subgraph "Gateway & Caching Layer"
+            B[<img src='https://www.vectorlogo.zone/logos/nodejs/nodejs-icon.svg' width='30' /><br>Node.js API Gateway]
+            C[<img src='https://www.vectorlogo.zone/logos/redis/redis-icon.svg' width='30' /><br>Redis Personalization Cache]
+        end
+        subgraph "Intelligence & Search Layer"
+            D[<img src='https://www.vectorlogo.zone/logos/python/python-icon.svg' width='30' /><br>Python SRP Service]
+            E[<img src='https://www.vectorlogo.zone/logos/elastic/elastic-icon.svg' width='30' /><br>Elasticsearch Autosuggest Engine]
+        end
+        subgraph "Data Persistence Layer"
+            F[<img src='https://www.trychroma.com/favicon.ico' width='30' /><br>ChromaDB Vector Store]
+            G[<img src='https://www.vectorlogo.zone/logos/mongodb/mongodb-icon.svg' width='30' /><br>MongoDB Product & Term Database]
+        end
     end
 
-    subgraph "Backend Services"
-        D[Express.js Server]
-        E[Search Controller]
-        F[Click Tracking API]
-    end
-
-    subgraph "Data Layer"
-        G[(Elasticsearch)]
-        H[(MongoDB)]
-        I[(Redis Cache)]
-    end
-
-    subgraph "Intelligence Layer"
-        J[Abbreviation Engine]
-        K[Scoring Algorithm]
-        L[Personalization Engine]
-    end
-
-    A --> D
-    B --> E
-    C --> E
-    E --> G
-    E --> H
-    F --> I
-    E --> J
-    E --> K
-    F --> L
-
-    style A fill:#61dafb
-    style D fill:#339933
-    style G fill:#005571
-    style H fill:#4ea94b
-    style I fill:#dc382d
+    A -- "API Calls" --> B
+    B -- "Real-time Personalization" <--> C
+    B -- "Semantic Search Request" --> D
+    B -- "Fast Autosuggest" --> E
+    B -- "Hydrate Results & Get Term Data" --> G
+    D -- "Vector Search" --> F
 ```
 
 -----
 
-## 🔄 Search Flow Diagram
+## 🔄 The Hybrid Search Flow: A Tale of Two Queries
+
+Our system uses two distinct pipelines for a superior user experience: one for lightning-fast suggestions, and another for deep, intelligent search results.
 
 ```mermaid
 sequenceDiagram
     participant U as User
     participant UI as React Frontend
-    participant API as Search API
+    participant API as Node.js Gateway
     participant ES as Elasticsearch
+    participant SRP as Python SRP
     participant DB as MongoDB
-    participant R as Redis
-    participant AE as Abbreviation Engine
+    
+    U->>UI: Types "washin machin"
+    
+    %% Autosuggest Flow
+    UI->>API: /autosuggest?q=washin machin
+    API->>ES: Multi-search on 'products' & 'search_terms'
+    ES-->>API: Returns "Washing Machines", "top load...", etc.
+    API-->>UI: Displays ranked suggestions
+    UI-->>U: Shows "top load washing machine"
 
-    U->>UI: Types "tv"
-    UI->>API: GET /autosuggest?q=tv&userId=123
-    API->>AE: expandQueryWithAbbreviations("tv")
-    AE-->>API: Returns "Televisions"
-    API->>R: getUserProfile(123)
-    R-->>API: Returns user preferences
-    API->>ES: Search with both "tv" & "Televisions"
-    ES-->>API: Returns scored results
-    API->>DB: Fallback category search
-    DB-->>API: Returns category matches
-    API-->>UI: Combined & scored suggestions
-    UI-->>U: Shows "Televisions" as top result
-
-    U->>UI: Clicks "Televisions"
-    UI->>API: POST /click {userId: 123, category: "Televisions"}
-    API->>R: Update user profile
-    R-->>API: Profile updated
-    API-->>UI: Click tracked successfully
+    %% Full Search Flow
+    U->>UI: Clicks "top load washing machine" suggestion
+    UI->>API: /search?q=top load washing machine
+    API->>DB: Finds term is linked to "Washing Machines" subcategory
+    API->>SRP: POST /api/search { query: "Washing Machines" }
+    SRP->>ChromaDB: Vector search for "Washing Machines"
+    SRP-->>API: Returns ranked list of product IDs
+    API->>DB: Fetches full details for ranked IDs
+    API-->>UI: Returns final, sorted product list
+    UI-->>U: Displays highly relevant washing machines
 ```
 
 -----
 
-## 🧮 Scoring Algorithm
+## 🧮 Algorithms & Intelligence
 
-Our proprietary scoring system combines multiple factors.
+### 1. Autosuggest Scoring (Elasticsearch & Node.js)
+
+For instant suggestions, we use a custom scoring model in Node.js on top of Elasticsearch's powerful text search.
 
 ```javascript
-// Scoring Priorities (Higher = Better Ranking)
+// Scoring Priorities for Autosuggest (Higher = Better Rank)
 const scoringWeights = {
-  personalization: 1000,    // Recently clicked items
-  exactMatch: 900,          // Perfect query match
-  prefixMatch: 500,         // Starts with query
-  categoryPrefix: 200,      // Category starts with query
-  substringMatch: 100,      // Contains query
-  categorySubstring: 50     // Category contains query
+  personalization: 1000, // Recently clicked items from Redis
+  exactMatch: 900,       // Query matches a full term
+  prefixMatch: 500,      // Term starts with the query
+  substringMatch: 100,   // Term contains the query
 };
 ```
 
-**Score Calculation Flow:**
+### 2. Semantic Search Pipeline (Python SRP)
 
-1.  **Personalization Boost (+1000)**: Recent user interactions.
-2.  **Query Matching (+900)**: Exact text matches.
-3.  **Prefix Priority (+500)**: Words starting with the query.
-4.  **Relevance Scoring (+100)**: Substring matches.
-5.  **Category Relevance (+50)**: Category-based matches.
+For the main search results, we use a multi-stage ML pipeline to deeply understand user intent.
+
+1.  **Intent Classification**: The user's query (`Washing Machines`) is converted into a vector embedding. This vector is used to find the most similar subcategories in ChromaDB, confirming the user's intent.
+2.  **Candidate Retrieval**: We perform a vector search in ChromaDB, retrieving hundreds of products from the classified subcategory that are semantically "close" to the query.
+3.  **Cross-Encoder Reranking**: This is the real magic. A powerful cross-encoder model takes the user's query and each candidate product, performing a deep analysis to generate a final, highly accurate relevance score. The results are then sorted by this score.
 
 -----
 
-## 🚀 Quick Start
+## 🛠️ Getting Started: A Foolproof 4-Terminal Setup
 
-**Prerequisites**
+This is a multi-service application. The easiest way to run it is with four separate terminal windows.
 
-  * Node.js 16+
-  * MongoDB 5.0+
-  * Elasticsearch 7.10+
-  * Redis 6.0+
+### Prerequisites
 
-**Installation**
+*   Node.js (v16+) & npm
+*   Python (v3.10+) & pip
+*   Docker & Docker Compose (or a local ChromaDB install)
+
+### Step 1: Clone the Repository & Configure
 
 ```bash
-# Clone the repository
-git clone https://github.com/your-username/smart-ecommerce-search.git
-cd smart-ecommerce-search
+git clone https://github.com/your-username/flipkart-grid-search.git
+cd flipkart-grid-search
 
-# Install backend dependencies
+# Create the .env file for the Node server
+cp server/.env.example server/.env
+# NOW, EDIT server/.env and add your MongoDB Atlas password
+```
+
+### Step 2: Run the Services
+
+Open four terminals, one for each step.
+
+**➡️ Terminal 1: Start the Backend Server (Node.js)**
+This server also handles Elasticsearch and Redis connections.
+```bash
 cd server
 npm install
+npm start
+```
+*This server runs on `http://localhost:8000`.*
 
-# Install frontend dependencies
-cd ../client
+**➡️ Terminal 2: Start the SRP Microservice (Python)**
+```bash
+cd SRP
+# It's recommended to use a virtual environment
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --host 0.0.0.0 --port 8001
+```
+*This service runs on `http://localhost:8001`.*
+
+**➡️ Terminal 3: Start the Frontend (React)**
+```bash
+cd client
 npm install
-
-# Setup environment variables
-cp .env.example .env
-# Configure your database URLs and API keys in the new .env file
+npm start
 ```
+*Your application will be available at `http://localhost:3000`.*
 
-**Environment Setup (`.env`)**
-
+**➡️ Terminal 4: Index Your Data (One-Time Setup)**
+This step is **critical** and populates your databases. Run these commands from the project root.
 ```bash
-# Database Configuration
-MONGODB_URI=mongodb://localhost:27017/ecommerce
-ELASTICSEARCH_URL=http://localhost:9200
-REDIS_URL=redis://localhost:6379
+# 1. Populate MongoDB with product data
+(cd server && node importData.js)
 
-# Server Configuration
-PORT=8000
-NODE_ENV=development
+# 2. Populate MongoDB with category & search term data
+(cd server && node importCategories.js)
+(cd server && node importSearchTerms.js)
 
-# Security
-JWT_SECRET=your-secret-key
+# 3. Populate ChromaDB (Vector DB) for the SRP
+# Ensure you are in the SRP virtual environment first!
+(cd SRP && source venv/bin/activate && python scripts/bulk_indexer.py)
 ```
+After indexing, **restart the Node.js server (Terminal 1)** for it to create the Elasticsearch indices with the new data.
 
-**Running the Application**
-
-```bash
-# Start backend server
-cd server && npm start
-
-# Start frontend (in a new terminal)
-cd client && npm start
-```
+**You are all set!** Open `http://localhost:3000` and experience the search.
 
 -----
 
-## 📊 Performance Metrics
+## 🧩 Tech Stack Deep Dive
 
-| Feature                 | Performance | Details                      |
-| ----------------------- | ----------- | ---------------------------- |
-| **Search Response Time** | `< 200ms`   | With Elasticsearch caching     |
-| **Autosuggest Latency** | `< 150ms`   | Redis-cached suggestions     |
-| **Database Queries** | `99.9% uptime` | ES + MongoDB fallback          |
-| **Personalization Load** | `< 50ms`    | Redis-powered user profiles  |
-| **Abbreviation Expansion** | `< 10ms`    | In-memory mapping            |
+| Layer                      | Tech                                                                                                   | Purpose                                                                          |
+| -------------------------- | ------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
+| **Frontend**               | <img src='https://www.vectorlogo.zone/logos/reactjs/reactjs-icon.svg' width='20' /> React, Material-UI | Building a fast, responsive, and modern user interface.                          |
+| **Gateway & API**          | <img src='https://www.vectorlogo.zone/logos/nodejs/nodejs-icon.svg' width='20' /> Node.js (Express)      | Orchestrates all backend services, handles authentication, and serves API endpoints. |
+| **Semantic Search (ML)**   | <img src='https://www.vectorlogo.zone/logos/python/python-icon.svg' width='20' /> Python (FastAPI)       | The AI brain. Handles intent classification, semantic retrieval, and reranking.  |
+| **Vector Database**        | <img src='https://www.trychroma.com/favicon.ico' width='20' /> ChromaDB                                 | Stores and enables ultra-fast similarity search on ML model embeddings.          |
+| **Primary Data Store**     | <img src='https://www.vectorlogo.zone/logos/mongodb/mongodb-icon.svg' width='20' /> MongoDB                | Stores all product, category, and search term data.                              |
+| **Real-time Personalization** | <img src='https://www.vectorlogo.zone/logos/redis/redis-icon.svg' width='20' /> Redis                  | Caches user clickstream data for instant personalization boosts.                 |
+| **Autosuggest Engine**     | <img src='https://www.vectorlogo.zone/logos/elastic/elastic-icon.svg' width='20' /> Elasticsearch        | Provides lightning-fast, prefix-based search for the autosuggest dropdown.         |
 
------
 
-## 🎯 Core Features Deep Dive
-
-### 1\. Intelligent Autosuggest
-
-  * **Dynamic Scoring**: Real-time ranking based on user behavior.
-  * **Mixed Results**: Products and Categories are provided in optimal ratios.
-  * **Highlighting**: Matching text is bolded for better UX.
-  * **Caching**: An LRU cache prevents duplicate API calls.
-
-### 2\. Abbreviation Intelligence
-
-A smart mapping system instantly translates common e-commerce abbreviations into full search terms.
-
-```javascript
-// Smart abbreviation mapping
-const abbreviationMap = {
-  'tv': 'Televisions',
-  'ac': 'Air Conditioners',
-  'wifi': 'Routers',
-  'dslr': 'DSLR & Mirrorless'
-  // 50+ mappings for common terms
-};
-```
-
-### 3\. Personalization Engine
-
-  * **Real-time Tracking**: Every click updates the user profile in Redis.
-  * **Behavioral Learning**: The system automatically learns category preferences.
-  * **Privacy Controls**: Users can reset their personalization data at any time.
-  * **Graceful Fallback**: The search works perfectly even without personalization.
-
-### 4\. Advanced Search Features
-
-  * **Multi-field Search**: Matches against name, description, and category fields.
-  * **Typo Tolerance**: Leverages Elasticsearch fuzzy matching for error correction.
-  * **Relevance Tuning**: Custom boost factors are applied for better results.
-  * **Result Diversification**: Ensures a balanced mix of products and categories.
-
------
-
-## 🔧 API Documentation
-
-### Search Endpoints
-
-**`GET /search`**
-Personalized product search with category suggestions.
-
-*Request:*
-
-```javascript
-GET /search?q=smartphone&userId=123
-```
-
-*Response:*
-
-```json
-{
-  "results": [
-    {
-      "type": "category",
-      "name": "Smartphones",
-      "match_score": 950
-    },
-    {
-      "type": "product",
-      "id": "64f7a8b2c1234567890",
-      "title": {
-        "longTitle": "iPhone 15 Pro Max",
-        "shortTitle": "Smartphones"
-      },
-      "rating": 4.8,
-      "match_score": 875
-    }
-  ]
-}
-```
-
-**`GET /autosuggest`**
-Real-time search suggestions.
-
-*Request:*
-
-```javascript
-GET /autosuggest?q=tv&userId=123
-```
-
-*Response:*
-
-```json
-[
-  {
-    "type": "category",
-    "name": "Televisions"
-  },
-  {
-    "type": "product",
-    "id": "64f7a8b2c1234567891",
-    "title": {
-      "longTitle": "<strong>TV</strong> Samsung 55\" 4K",
-      "shortTitle": "Televisions"
-    }
-  }
-]
-```
-
-**`POST /click`**
-Track user interactions for personalization.
-
-*Request:*
-
-```javascript
-POST /click
-{
-  "userId": "123",
-  "productId": "64f7a8b2c1234567890", // Optional
-  "category": "Televisions" // Optional
-}
-```
-
-*Response:*
-
-```json
-{
-  "message": "Click tracked successfully"
-}
-```
-
------
-
-## 🏆 Technical Highlights
-
-  * **Database Architecture**
-
-      * **Primary**: Elasticsearch for lightning-fast full-text search.
-      * **Fallback**: MongoDB for reliability and complex queries.
-      * **Cache**: Redis for user sessions, query caching, and personalization profiles.
-      * **Sync Strategy**: Real-time data synchronization across data stores.
-
-  * **Smart Query Processing**
-
-    1.  **Input Sanitization**: Protects against XSS and validates queries.
-    2.  **Abbreviation Expansion**: Auto-expands common abbreviations.
-    3.  **Personalization Layer**: Injects user preferences into the scoring model.
-    4.  **Multi-Engine Search**: Queries Elasticsearch first, with a fallback to MongoDB.
-    5.  **Result Aggregation**: Merges and ranks all results before responding.
-
-  * **Frontend Innovation**
-
-      * **Debounced Search**: Prevents API spam with a 400ms delay while typing.
-      * **Intelligent Caching**: Client-side LRU cache for suggestions.
-      * **Keyboard Navigation**: Full accessibility support for search and suggestions.
-      * **Progressive Enhancement**: Works even if JavaScript is disabled.
-
------
-
-## 🔮 Future Enhancements
-
-  * **Phase 2 - AI Integration**
-      * **ML-Powered Recommendations**: TensorFlow.js integration.
-      * **Semantic Search**: Vector embeddings for meaning-based search.
-      * **Auto-Complete Intelligence**: GPT-powered query completion.
-      * **Visual Search**: Image-based product discovery.
-  * **Phase 3 - Advanced Analytics**
-      * **Search Analytics Dashboard**: Real-time metrics on query performance.
-      * **A/B Testing Framework**: Experiment with different ranking algorithms.
-      * **Business Intelligence**: Track the revenue impact of search improvements.
-      * **Performance Monitoring**: Automated alerting for system health.
-
------
-
-## 👥 Team & Contributors
-
-  * **Lead Developer**: Built comprehensive search architecture, personalization engine, and intelligent autosuggest system.
-  * **Technologies Mastered**:
-      * **Backend**: Node.js, Express.js, Elasticsearch, MongoDB, Redis
-      * **Frontend**: React, Material-UI, Real-time state management
-      * **DevOps**: Multi-database orchestration, caching strategies
-      * **Algorithms**: Custom scoring, abbreviation mapping, behavioral analysis
-
------
-
-## 📈 Impact & Results
-
-  * **Search Accuracy**: **40%** improvement in relevant results.
-  * **User Engagement**: **60%** increase in click-through rates.
-  * **Performance**: **Sub-200ms** response times at scale.
-  * **Personalization**: **85%** of users see customized results.
-  * **Developer Experience**: Clean APIs with comprehensive documentation.
-
------
-
-## 🎖️ Why This Stands Out
-
-  * **Production-Ready**: Built with an enterprise-grade, fault-tolerant architecture.
-  * **User-Centric**: Solves real UX problems with intelligent, thoughtful design.
-  * **Performance Focused**: Optimized for speed, low latency, and scalability.
-  * **Innovation**: Novel abbreviation mapping and a hybrid scoring algorithm.
-  * **Comprehensive**: A full-stack solution with detailed documentation and diagrams.
