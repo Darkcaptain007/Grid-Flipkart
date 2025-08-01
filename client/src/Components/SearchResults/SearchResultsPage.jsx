@@ -213,14 +213,18 @@ const SearchResultsPage = () => {
 
     // Extract search query from URL parameters
     useEffect(() => {
-        const urlParams = new URLSearchParams(location.search);
-        const query = urlParams.get('q') || '';
-        setSearchTerm(query);
+    const urlParams = new URLSearchParams(location.search);
+    const query = urlParams.get('q') || ''; // The query for the API
+    const originalQuery = urlParams.get('oq'); // The query for display
 
-        if (query) {
-            fetchSearchResults(query);
-        }
-    }, [location.search]);
+    // Use the original query for display if it exists, otherwise fall back to the main query
+    setSearchTerm(originalQuery || query);
+
+    // The API call still uses the high-quality 'q' parameter
+    if (query) {
+        fetchSearchResults(query);
+    }
+}, [location.search]);
 
    const fetchSearchResults = async (query) => {
     setLoading(true);

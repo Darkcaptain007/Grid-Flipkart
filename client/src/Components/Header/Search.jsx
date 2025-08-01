@@ -81,20 +81,15 @@ const Search = () => {
   const handleTextChange = e => setText(e.target.value);
 
 
-  const handleSearch = () => {
+  
+const handleSearch = () => {
     if (text.trim()) {
-      let searchQuery = text.trim();
-
-      // If there are suggestions and user presses Enter without clicking,
-      // use the top suggestion as the search query
-      if (results.length > 0) {
-        const topSuggestion = results[0];
-        searchQuery = topSuggestion.type === 'product' 
-          ? topSuggestion.title.longTitle 
-          : topSuggestion.name;
-      }
-
-      history.push(`/search?q=${encodeURIComponent(searchQuery)}`);
+      const query = text.trim();
+      // When the user presses Enter, the search query (q) and the original query (oq)
+      // should be the same: the text they typed.
+      // The API will use 'q' for the search.
+      // The UI will use 'oq' for the display text.
+      history.push(`/search?q=${encodeURIComponent(query)}&oq=${encodeURIComponent(query)}`);
       clearSearch();
     }
   };
