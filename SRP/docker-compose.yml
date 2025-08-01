@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  srp_api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: flipkart_srp_api
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma_db_data:/app/db_storage
+    restart: unless-stopped
+    # The 'deploy' section for GPU has been completely removed.
+
+volumes:
+  chroma_db_data:
