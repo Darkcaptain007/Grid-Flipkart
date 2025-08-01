@@ -102,7 +102,7 @@ def main():
     embed_model = get_embedding_model()
     chroma_manager = ChromaManager()
 
-    # index_products(chroma_manager, embed_model)
+    index_products(chroma_manager, embed_model)
     index_categories(chroma_manager, embed_model)
 
     print("\n--- Bulk Indexing Complete for all collections! ---")
