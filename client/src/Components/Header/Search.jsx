@@ -82,19 +82,40 @@ const Search = () => {
   // This helper function is unchanged.
   const handleTextChange = e => setText(e.target.value);
   
-  // --- ENHANCEMENT: The handleSearch function is now intelligent ---
+  // --- DEFINITIVE FIX FOR THE "ENTER" KEY BEHAVIOR ---
   const handleSearch = () => {
-    // If there is a top suggestion available in the list...
-    if (results && results.length > 0) {
-      // ...trigger the click handler for that top suggestion.
-      onSuggestionClick(results[0]);
-    } 
-    // Otherwise (if there are no suggestions), fall back to the original behavior.
-    else if (text.trim()) {
-      const query = text.trim();
-      history.push(`/search?q=${encodeURIComponent(query)}&oq=${encodeURIComponent(query)}`);
-      clearSearch();
+    const query = text.trim();
+    if (!query) {
+      return; // Do nothing if search bar is empty
     }
+
+    const topSuggestion = results && results.length > 0 ? results[0] : null;
+
+    // This is the ideal case: The top suggestion is an "intent" (category/term), not a product.
+    // We use this smart suggestion to create a better search.
+    if (topSuggestion && topSuggestion.type !== 'product') {
+      let searchTarget = '';
+      let displayQuery = '';
+
+      if (topSuggestion.type === 'category' || topSuggestion.type === 'subcategory') {
+        searchTarget = topSuggestion.name;
+        displayQuery = topSuggestion.name;
+      } else if (topSuggestion.type === 'search_term') {
+        searchTarget = topSuggestion.subcategory; // Send the correct subcategory to the SRP
+        displayQuery = topSuggestion.name;       // Display the friendly search string to the user
+      }
+      
+      history.push(`/search?q=${encodeURIComponent(searchTarget)}&oq=${encodeURIComponent(displayQuery)}`);
+    
+    } else {
+      // This is the fallback that fixes the bug. It runs if:
+      // 1. The top suggestion IS a product (we must not go to the product page on Enter).
+      // 2. There are NO suggestions at all.
+      // In both scenarios, the correct action is to search for the text the user actually typed.
+      history.push(`/search?q=${encodeURIComponent(query)}&oq=${encodeURIComponent(query)}`);
+    }
+
+    clearSearch();
   };
 
   const clearSearch = () => {
@@ -102,11 +123,11 @@ const Search = () => {
     setResults([]);
   };
 
-  // This onSuggestionClick function is already correct and is preserved exactly.
+  // This onSuggestionClick function is preserved exactly as it was.
+  // It correctly handles MOUSE CLICKS on all suggestion types.
   const onSuggestionClick = async suggestion => {
     console.log('Suggestion clicked:', suggestion);
 
-    // 1. Handle PRODUCT clicks
     if (suggestion.type === 'product') {
         if (account && suggestion.id) {
             try {
@@ -126,7 +147,6 @@ const Search = () => {
         return;
     }
 
-    // 2. Handle CATEGORY, SUBCATEGORY, and SEARCH_TERM clicks
     let searchTarget = '';
     let displayQuery = '';
 
