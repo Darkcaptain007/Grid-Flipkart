@@ -50,3 +50,6 @@ Thumbs.db
 # Test artifacts
 .pytest_cache/
 .coverage
+
+#Non neccessary folders
+SRP/db_storage/
