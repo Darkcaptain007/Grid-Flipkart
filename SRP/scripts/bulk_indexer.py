@@ -66,7 +66,7 @@ def index_categories(chroma_manager, embed_model):
     df['search_string'] = df['search_string'].astype(str).str.strip()
     
 
-    category_df = df
+    category_df = df.drop_duplicates()
 
     print(f"Processing {len(category_df)} search strings...")
 

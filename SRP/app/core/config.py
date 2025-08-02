@@ -12,9 +12,9 @@ CLIENT_DISPLAY_COUNT=10
 
 # --- Data Files ---
 # All files are expected to be in the 'data/' directory
-PRODUCT_DATA_FILE="cleaned_combined.csv"
+PRODUCT_DATA_FILE="product_data.csv"
 # CATEGORY_DATA_FILE=subcategories_with_search_strings.csv
-CATEGORY_DATA_FILE="subcategories_search_terms_multiline.csv"
+CATEGORY_DATA_FILE="search_strings_subcategories.csv"
 
 # --- Data File Paths ---
 PRODUCT_DATA_PATH = ROOT_DIR / "data" / PRODUCT_DATA_FILE
@@ -43,5 +43,8 @@ FALLBACK_CANDIDATE_COUNT=200
 
 # Batch size for bulk indexing
 BATCH_SIZE = 512
+
+# --- API Configuration ---
+API_BASE_URL= "http://127.0.0.1:8000"
 
 
