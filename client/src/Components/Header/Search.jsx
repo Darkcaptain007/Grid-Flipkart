@@ -79,11 +79,18 @@ const Search = () => {
   }, [text, account]);
 
 
-  // These helper functions are unchanged.
+  // This helper function is unchanged.
   const handleTextChange = e => setText(e.target.value);
   
+  // --- ENHANCEMENT: The handleSearch function is now intelligent ---
   const handleSearch = () => {
-    if (text.trim()) {
+    // If there is a top suggestion available in the list...
+    if (results && results.length > 0) {
+      // ...trigger the click handler for that top suggestion.
+      onSuggestionClick(results[0]);
+    } 
+    // Otherwise (if there are no suggestions), fall back to the original behavior.
+    else if (text.trim()) {
       const query = text.trim();
       history.push(`/search?q=${encodeURIComponent(query)}&oq=${encodeURIComponent(query)}`);
       clearSearch();
@@ -95,14 +102,12 @@ const Search = () => {
     setResults([]);
   };
 
-  // --- MODIFIED onSuggestionClick FUNCTION ---
-  // This is the updated click handler that correctly processes all suggestion types.
+  // This onSuggestionClick function is already correct and is preserved exactly.
   const onSuggestionClick = async suggestion => {
     console.log('Suggestion clicked:', suggestion);
 
     // 1. Handle PRODUCT clicks
     if (suggestion.type === 'product') {
-        // Track the click if the user is logged in
         if (account && suggestion.id) {
             try {
                 await axios.post('http://localhost:8000/click', {
@@ -116,28 +121,25 @@ const Search = () => {
         } else if (!account) {
             console.warn('User not logged in - Skipping click tracking');
         }
-        // Always navigate to the product page
         history.push(`/product/${suggestion.id}`);
         clearSearch();
-        return; // Exit function after handling product click
+        return;
     }
 
     // 2. Handle CATEGORY, SUBCATEGORY, and SEARCH_TERM clicks
-    let searchTarget = '';  // This will be the value for the 'q' parameter (for searching)
-    let displayQuery = '';  // This will be the value for the 'oq' parameter (for display)
+    let searchTarget = '';
+    let displayQuery = '';
 
     if (suggestion.type === 'category' || suggestion.type === 'subcategory') {
         searchTarget = suggestion.name;
         displayQuery = suggestion.name;
     } else if (suggestion.type === 'search_term') {
-        searchTarget = suggestion.subcategory; // CRUCIAL: Search by the underlying subcategory
-        displayQuery = suggestion.name;       // Display the clicked search string
+        searchTarget = suggestion.subcategory;
+        displayQuery = suggestion.name;
     }
 
-    // Track the click for any of these types if the user is logged in
     if (searchTarget && account) {
         try {
-            // We track the `searchTarget` which is the actual category/subcategory
             await axios.post('http://localhost:8000/click', {
                 userId: account,
                 category: searchTarget 
@@ -148,7 +150,6 @@ const Search = () => {
         }
     }
 
-    // Perform the navigation
     if (searchTarget) {
         history.push(`/search?q=${encodeURIComponent(searchTarget)}&oq=${encodeURIComponent(displayQuery)}`);
     }
@@ -156,6 +157,7 @@ const Search = () => {
     clearSearch();
   };
 
+  // The rendering logic is preserved exactly as you provided.
   return (
     <Box className={classes.search}>
       <InputBase
@@ -176,7 +178,6 @@ const Search = () => {
               onClick={() => onSuggestionClick(suggestion)}
             >
               {suggestion.type === 'product' ? (
-                // --- MODIFIED: Restored full product rendering ---
                 <Box>
                   <span dangerouslySetInnerHTML={{
                     __html: DOMPurify.sanitize(suggestion.title.longTitle)
@@ -189,27 +190,23 @@ const Search = () => {
                   </Typography>
                 </Box>
               ) : suggestion.type === 'search_term' ? (
-                // This is the rendering for our new suggestion type
                 <span className={classes.suggestionCategory}>
                   {suggestion.name}
                   <span className={classes.suggestionType}>in {suggestion.subcategory}</span>
                 </span>
               ) : suggestion.type === 'subcategory' ? (
-                // Existing rendering for subcategory
                 <span className={classes.suggestionCategory}>
                   {suggestion.name}
                   <span className={classes.suggestionType}>in Subcategory</span>
                 </span>
               ) : suggestion.type === 'category' ? (
-                 // Existing rendering for category
-                <span className={classes.suggestionCategory}>
+                 <span className={classes.suggestionCategory}>
                   {suggestion.name}
                   <span className={classes.suggestionType}>in Category</span>
                 </span>
               ) : null}
             </ListItem>
           ))}
-          {/* This "View all" item is preserved */}
           <ListItem disabled>
             <Typography variant="body2">
               View all results for "{text}"
