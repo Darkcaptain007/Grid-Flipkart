@@ -163,6 +163,15 @@ export const autosuggest = async (req, res) => {
     } catch (redisError) {
         console.error('Redis error in autosuggest:', redisError);
     }
+    const boostWords = new Set();
+    if (boostCategories.length > 0) {
+        boostCategories.forEach(cat => {
+            // Split phrases like "Men Formal Shoes" into individual words
+            cat.toLowerCase().split(' ').forEach(word => boostWords.add(word));
+        });
+        // Now boostWords might contain: {'men', 'formal', 'shoes', 'disney', 'casual'}
+    }
+
 
     try {
         // --- PRIMARY ELASTICSEARCH PATH ---
@@ -245,7 +254,19 @@ export const autosuggest = async (req, res) => {
                 let score = 0;
                 const targetCat = cat.subcategory || cat.name;
                 if (boostCategories.includes(targetCat)) score += 1000;
-                
+                if (boostWords.size > 0) {
+                    const candidateWords = nameLower.split(' ');
+                    let matchCount = 0;
+                    candidateWords.forEach(word => {
+                        if (boostWords.has(word)) {
+                            matchCount++;
+                        }
+                    });
+                    // Give a strong boost for each shared keyword found
+                    if (matchCount > 0) {
+                        score += 800 * matchCount;
+                    }
+                }
                 // These scores are intentionally higher than product scores to ensure they rank first
                 if (nameLower === query || nameLower === searchQuery) {
                     score += 2000; // Exact match is the best signal
