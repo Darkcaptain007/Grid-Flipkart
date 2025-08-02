@@ -83,38 +83,32 @@ const Search = () => {
   const handleTextChange = e => setText(e.target.value);
   
   // --- DEFINITIVE FIX FOR THE "ENTER" KEY BEHAVIOR ---
-  const handleSearch = () => {
+   const handleSearch = () => {
     const query = text.trim();
-    if (!query) {
-      return; // Do nothing if search bar is empty
-    }
+    if (!query) return;
 
-    const topSuggestion = results && results.length > 0 ? results[0] : null;
+    const topSuggestion = results?.[0];
 
-    // This is the ideal case: The top suggestion is an "intent" (category/term), not a product.
-    // We use this smart suggestion to create a better search.
-    if (topSuggestion && topSuggestion.type !== 'product') {
-      let searchTarget = '';
-      let displayQuery = '';
-
-      if (topSuggestion.type === 'category' || topSuggestion.type === 'subcategory') {
-        searchTarget = topSuggestion.name;
-        displayQuery = topSuggestion.name;
-      } else if (topSuggestion.type === 'search_term') {
-        searchTarget = topSuggestion.subcategory; // Send the correct subcategory to the SRP
-        displayQuery = topSuggestion.name;       // Display the friendly search string to the user
-      }
+    // If the top suggestion is a PRODUCT, extract the corrected keyword for the SEARCH,
+    // but keep the user's original text for DISPLAY.
+    if (topSuggestion && topSuggestion.type === 'product' && topSuggestion.title?.longTitle) {
       
-      history.push(`/search?q=${encodeURIComponent(searchTarget)}&oq=${encodeURIComponent(displayQuery)}`);
+      const highlightedHTML = topSuggestion.title.longTitle;
+      const match = highlightedHTML.match(/<strong>(.*?)<\/strong>/i);
+      const correctedKeyword = match ? match[1] : query;
+
+      // The key change is here: `oq` is set to the user's text (`query`)
+      history.push(`/search?q=${encodeURIComponent(correctedKeyword)}&oq=${encodeURIComponent(query)}`);
+      
+    // If the top suggestion is a category/term, the existing logic is already correct
+    // because onSuggestionClick sets `oq` to the name of the suggestion.
+    } else if (topSuggestion && topSuggestion.type !== 'product') {
+      onSuggestionClick(topSuggestion);
     
+    // Fallback: If no suggestions, search for the raw text.
     } else {
-      // This is the fallback that fixes the bug. It runs if:
-      // 1. The top suggestion IS a product (we must not go to the product page on Enter).
-      // 2. There are NO suggestions at all.
-      // In both scenarios, the correct action is to search for the text the user actually typed.
       history.push(`/search?q=${encodeURIComponent(query)}&oq=${encodeURIComponent(query)}`);
     }
-
     clearSearch();
   };
 
