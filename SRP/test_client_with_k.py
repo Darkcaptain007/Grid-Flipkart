@@ -7,7 +7,7 @@ import os
 from dotenv import load_dotenv
 
 # --- Configuration ---
-API_URL = "http://127.0.0.1:8000/api/search"
+API_URL = "http://localhost:8001/api/search"
 load_dotenv()
 PRODUCT_DATA_FILE = os.getenv("PRODUCT_DATA_FILE")
 DATA_FILE_PATH = f"data/{PRODUCT_DATA_FILE}"

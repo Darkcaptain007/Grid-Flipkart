@@ -5,8 +5,8 @@ FROM python:3.12-slim
 WORKDIR /app
 
 # Set environment variables for Python
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
 # Install system dependencies that might be needed for some Python packages
 RUN apt-get update && apt-get install -y --no-install-recommends gcc
