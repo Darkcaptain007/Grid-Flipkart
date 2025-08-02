@@ -116,11 +116,24 @@ const scoringWeights = {
 
 ### 2. Semantic Search Pipeline (Python SRP)
 
-For the main search results, we use a multi-stage ML pipeline to deeply understand user intent.
+Our Search Results Page (SRP) uses a rigorously validated, multi-stage pipeline to ensure highly relevant and diverse results:
 
-1.  **Intent Classification**: The user's query (`Washing Machines`) is converted into a vector embedding. This vector is used to find the most similar subcategories in ChromaDB, confirming the user's intent.
-2.  **Candidate Retrieval**: We perform a vector search in ChromaDB, retrieving hundreds of products from the classified subcategory that are semantically "close" to the query.
-3.  **Cross-Encoder Reranking**: This is the real magic. A powerful cross-encoder model takes the user's query and each candidate product, performing a deep analysis to generate a final, highly accurate relevance score. The results are then sorted by this score.
+1. **Intent Classification & Result Diversification**  
+   - We embed the user’s query (e.g. “Washing Machines”) into a vector.  
+   - That embedding is compared not only to subcategory names, but also to their standardized abbreviations and a curated set of related terms in our **ChromaDB** category index.  
+   - We then select the top *K* **unique** subcategories—ensuring that we cover distinct facets of the user’s intent and maximize result diversification.  
+
+2. **Candidate Retrieval**  
+   - For each of those *K* subcategories, we perform a vector search in the **ChromaDB** product index.  
+   - We retrieve the top *M* products per category, giving us a pool of *K × M* candidates that are all semantically close to the query.  
+
+3. **Cross-Encoder Reranking**  
+   - A state-of-the-art Cross-Encoder model takes the original query and each candidate’s metadata (title, description, attributes).  
+   - It produces a fine-grained relevance score for every candidate.  
+   - We sort the *K × M* set by this score to produce a final, precision-optimized ranking of product IDs, which is returned in the API response.  
+
+This design guarantees both **deep semantic understanding** of user intent and **result diversification**, while leveraging a powerful Cross-Encoder for ultimate ranking accuracy.  
+
 
 -----
 
