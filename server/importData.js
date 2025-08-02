@@ -28,7 +28,7 @@ async function importCSVData() {
     }
 
     const productsToSave = [];
-    const csvFilePath = path.resolve(process.cwd(), 'flipkart_appliances_cleaned.csv');
+    const csvFilePath = path.resolve(process.cwd(), 'cleaned_combined.csv');
 
     fs.createReadStream(csvFilePath)
         .pipe(csv())
