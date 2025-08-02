@@ -51,6 +51,7 @@ const Search = () => {
   const { account } = useContext(LoginContext);
 
 
+  // This useEffect block is unchanged and works correctly.
   useEffect(() => {
     if (!text) {
       setResults([]);
@@ -78,76 +79,82 @@ const Search = () => {
   }, [text, account]);
 
 
+  // These helper functions are unchanged.
   const handleTextChange = e => setText(e.target.value);
-
-
   
-const handleSearch = () => {
+  const handleSearch = () => {
     if (text.trim()) {
       const query = text.trim();
-      // When the user presses Enter, the search query (q) and the original query (oq)
-      // should be the same: the text they typed.
-      // The API will use 'q' for the search.
-      // The UI will use 'oq' for the display text.
       history.push(`/search?q=${encodeURIComponent(query)}&oq=${encodeURIComponent(query)}`);
       clearSearch();
     }
   };
-
 
   const clearSearch = () => {
     setText('');
     setResults([]);
   };
 
-
+  // --- MODIFIED onSuggestionClick FUNCTION ---
+  // This is the updated click handler that correctly processes all suggestion types.
   const onSuggestionClick = async suggestion => {
-    console.log('Suggestion clicked:', suggestion); // Debug: Log the full suggestion object
+    console.log('Suggestion clicked:', suggestion);
 
-
+    // 1. Handle PRODUCT clicks
     if (suggestion.type === 'product') {
-        if (!account) {
-            console.warn('User not logged in - Cannot track click');
-            alert('Please log in to track clicks and get personalized suggestions');
-            return;
-        }
-        if (!suggestion.id) {
-            console.error('No product ID found in suggestion:', suggestion);
-            return;
-        }
-        try {
-            console.log(`Attempting to track product click for user: ${account}, product: ${suggestion.id}`); // Debug: Before POST
-            await axios.post('http://localhost:8000/click', {
-                userId: account,
-                productId: suggestion.id
-            });
-            console.log('Product click tracked successfully'); // Debug: After successful POST
-        } catch (e) {
-            console.error('Click tracking failed:', e.response?.data || e.message); // Debug: Log full error
-        }
-        history.push(`/product/${suggestion.id}`);
-    } else {
-        // NEW: Track category/subcategory click
-        if (account) {
+        // Track the click if the user is logged in
+        if (account && suggestion.id) {
             try {
-                console.log(`Attempting to track category click for user: ${account}, category: ${suggestion.name}`); // Debug
                 await axios.post('http://localhost:8000/click', {
                     userId: account,
-                    category: suggestion.name  // Send the category/subcategory name
+                    productId: suggestion.id
                 });
-                console.log('Category click tracked successfully');
+                console.log('Product click tracked successfully');
             } catch (e) {
-                console.error('Category click tracking failed:', e);
+                console.error('Click tracking failed:', e.response?.data || e.message);
             }
-        } else {
-            console.warn('User not logged in - Skipping category track');
+        } else if (!account) {
+            console.warn('User not logged in - Skipping click tracking');
         }
-        history.push(`/search?q=${encodeURIComponent(suggestion.name)}`);
+        // Always navigate to the product page
+        history.push(`/product/${suggestion.id}`);
+        clearSearch();
+        return; // Exit function after handling product click
     }
+
+    // 2. Handle CATEGORY, SUBCATEGORY, and SEARCH_TERM clicks
+    let searchTarget = '';  // This will be the value for the 'q' parameter (for searching)
+    let displayQuery = '';  // This will be the value for the 'oq' parameter (for display)
+
+    if (suggestion.type === 'category' || suggestion.type === 'subcategory') {
+        searchTarget = suggestion.name;
+        displayQuery = suggestion.name;
+    } else if (suggestion.type === 'search_term') {
+        searchTarget = suggestion.subcategory; // CRUCIAL: Search by the underlying subcategory
+        displayQuery = suggestion.name;       // Display the clicked search string
+    }
+
+    // Track the click for any of these types if the user is logged in
+    if (searchTarget && account) {
+        try {
+            // We track the `searchTarget` which is the actual category/subcategory
+            await axios.post('http://localhost:8000/click', {
+                userId: account,
+                category: searchTarget 
+            });
+            console.log(`Category/Term click tracked for: ${searchTarget}`);
+        } catch (e) {
+            console.error('Category/Term click tracking failed:', e);
+        }
+    }
+
+    // Perform the navigation
+    if (searchTarget) {
+        history.push(`/search?q=${encodeURIComponent(searchTarget)}&oq=${encodeURIComponent(displayQuery)}`);
+    }
+    
     clearSearch();
   };
-
-
 
   return (
     <Box className={classes.search}>
@@ -165,13 +172,11 @@ const handleSearch = () => {
           {results.map((suggestion, index) => (
             <ListItem
               button
-              key={index}
+              key={`${suggestion.type}-${suggestion.name || suggestion.id}-${index}`}
               onClick={() => onSuggestionClick(suggestion)}
-              style={{ cursor: 'pointer' }}
             >
-              {typeof suggestion === 'string' ? (
-                <Typography>{suggestion}</Typography>
-              ) : suggestion.type === 'product' ? (
+              {suggestion.type === 'product' ? (
+                // --- MODIFIED: Restored full product rendering ---
                 <Box>
                   <span dangerouslySetInnerHTML={{
                     __html: DOMPurify.sanitize(suggestion.title.longTitle)
@@ -183,16 +188,28 @@ const handleSearch = () => {
                     {suggestion.title.shortTitle}
                   </Typography>
                 </Box>
-              ) : (
+              ) : suggestion.type === 'search_term' ? (
+                // This is the rendering for our new suggestion type
                 <span className={classes.suggestionCategory}>
                   {suggestion.name}
-                  <span className={classes.suggestionType}>
-                    {suggestion.type === 'category' ? 'in Category' : 'in Subcategory'}
-                  </span>
+                  <span className={classes.suggestionType}>in {suggestion.subcategory}</span>
                 </span>
-              )}
+              ) : suggestion.type === 'subcategory' ? (
+                // Existing rendering for subcategory
+                <span className={classes.suggestionCategory}>
+                  {suggestion.name}
+                  <span className={classes.suggestionType}>in Subcategory</span>
+                </span>
+              ) : suggestion.type === 'category' ? (
+                 // Existing rendering for category
+                <span className={classes.suggestionCategory}>
+                  {suggestion.name}
+                  <span className={classes.suggestionType}>in Category</span>
+                </span>
+              ) : null}
             </ListItem>
           ))}
+          {/* This "View all" item is preserved */}
           <ListItem disabled>
             <Typography variant="body2">
               View all results for "{text}"

@@ -831,222 +831,6 @@ const Profile = ({ account, setAccount }) => {
 export default Profile;
 </file>
 
-<file path="client/src/Components/Header/Search.jsx">
-import { useState, useEffect, useRef, useContext } from 'react';
-import { InputBase, List, ListItem, Typography, makeStyles, Box } from '@material-ui/core';
-import SearchIcon from '@material-ui/icons/Search';
-import { useHistory } from 'react-router-dom';
-import axios from 'axios';
-import DOMPurify from 'dompurify';
-import { LoginContext } from '../../context/ContextProvider';
-
-
-const useStyle = makeStyles(theme => ({
-  search: {
-    borderRadius: 6,
-    marginLeft: 25,
-    width: '45%',
-    backgroundColor: '#fff',
-    display: 'flex',
-    position: 'relative',
-  },
-  searchIcon: {
-    marginLeft: 'auto',
-    padding: 5,
-    display: 'flex',
-    color: 'blue',
-    cursor: 'pointer',
-  },
-  inputRoot: { fontSize: 'unset', width: '100%' },
-  inputInput: { paddingLeft: 20, width: '100%' },
-  list: {
-    position: 'absolute',
-    color: '#000',
-    backgroundColor: '#fff',
-    marginTop: 36,
-    width: '100%',
-    borderRadius: '0 0 2px 2px',
-    boxShadow: '0 2px 4px 0 rgb(0 0 0 / 20%)',
-    maxHeight: 350,
-    overflowY: 'auto',
-    zIndex: 1000,
-  },
-  suggestionCategory: { fontWeight: 600, color: '#2874f0', paddingLeft: 12 },
-  suggestionType: { fontSize: 12, color: '#666', marginLeft: 8 },
-}));
-
-
-const Search = () => {
-  const classes = useStyle();
-  const history = useHistory();
-  const [text, setText] = useState('');
-  const [results, setResults] = useState([]);
-  const suggestionCache = useRef(new Map());
-  const { account } = useContext(LoginContext);
-
-
-  useEffect(() => {
-    if (!text) {
-      setResults([]);
-      return;
-    }
-    const fetchSuggestions = async () => {
-      if (suggestionCache.current.has(text)) {
-        setResults(suggestionCache.current.get(text));
-        return;
-      }
-      try {
-        const { data } = await axios.get(
-          `http://localhost:8000/autosuggest?q=${encodeURIComponent(text)}${account ? `&userId=${encodeURIComponent(account)}` : ''}`
-        );
-        const limitedResults = data.slice(0, 8);
-        setResults(limitedResults);
-        suggestionCache.current.set(text, limitedResults);
-      } catch (error) {
-        console.error("Autosuggest API call failed:", error);
-        setResults([]);
-      }
-    };
-    const timeoutId = setTimeout(fetchSuggestions, 400); // debounce
-    return () => clearTimeout(timeoutId);
-  }, [text, account]);
-
-
-  const handleTextChange = e => setText(e.target.value);
-
-
-  const handleSearch = () => {
-    if (text.trim()) {
-      let searchQuery = text.trim();
-
-      // If there are suggestions and user presses Enter without clicking,
-      // use the top suggestion as the search query
-      if (results.length > 0) {
-        const topSuggestion = results[0];
-        searchQuery = topSuggestion.type === 'product' 
-          ? topSuggestion.title.longTitle 
-          : topSuggestion.name;
-      }
-
-      history.push(`/search?q=${encodeURIComponent(searchQuery)}`);
-      clearSearch();
-    }
-  };
-
-
-  const clearSearch = () => {
-    setText('');
-    setResults([]);
-  };
-
-
-  const onSuggestionClick = async suggestion => {
-    console.log('Suggestion clicked:', suggestion); // Debug: Log the full suggestion object
-
-
-    if (suggestion.type === 'product') {
-        if (!account) {
-            console.warn('User not logged in - Cannot track click');
-            alert('Please log in to track clicks and get personalized suggestions');
-            return;
-        }
-        if (!suggestion.id) {
-            console.error('No product ID found in suggestion:', suggestion);
-            return;
-        }
-        try {
-            console.log(`Attempting to track product click for user: ${account}, product: ${suggestion.id}`); // Debug: Before POST
-            await axios.post('http://localhost:8000/click', {
-                userId: account,
-                productId: suggestion.id
-            });
-            console.log('Product click tracked successfully'); // Debug: After successful POST
-        } catch (e) {
-            console.error('Click tracking failed:', e.response?.data || e.message); // Debug: Log full error
-        }
-        history.push(`/product/${suggestion.id}`);
-    } else {
-        // NEW: Track category/subcategory click
-        if (account) {
-            try {
-                console.log(`Attempting to track category click for user: ${account}, category: ${suggestion.name}`); // Debug
-                await axios.post('http://localhost:8000/click', {
-                    userId: account,
-                    category: suggestion.name  // Send the category/subcategory name
-                });
-                console.log('Category click tracked successfully');
-            } catch (e) {
-                console.error('Category click tracking failed:', e);
-            }
-        } else {
-            console.warn('User not logged in - Skipping category track');
-        }
-        history.push(`/search?q=${encodeURIComponent(suggestion.name)}`);
-    }
-    clearSearch();
-  };
-
-
-
-  return (
-    <Box className={classes.search}>
-      <InputBase
-        placeholder="Search for products, brands and more"
-        classes={{ root: classes.inputRoot, input: classes.inputInput }}
-        value={text}
-        onChange={handleTextChange}
-        onKeyDown={e => { if (e.key === 'Enter') handleSearch(); }}
-        inputProps={{ 'aria-label': 'search' }}
-      />
-      <Box className={classes.searchIcon} onClick={handleSearch}><SearchIcon /></Box>
-      {results.length > 0 && (
-        <List className={classes.list}>
-          {results.map((suggestion, index) => (
-            <ListItem
-              button
-              key={index}
-              onClick={() => onSuggestionClick(suggestion)}
-              style={{ cursor: 'pointer' }}
-            >
-              {typeof suggestion === 'string' ? (
-                <Typography>{suggestion}</Typography>
-              ) : suggestion.type === 'product' ? (
-                <Box>
-                  <span dangerouslySetInnerHTML={{
-                    __html: DOMPurify.sanitize(suggestion.title.longTitle)
-                  }} />
-                  <Typography
-                    variant="body2"
-                    style={{ marginLeft: 10, color: '#888', display: 'inline' }}
-                  >
-                    {suggestion.title.shortTitle}
-                  </Typography>
-                </Box>
-              ) : (
-                <span className={classes.suggestionCategory}>
-                  {suggestion.name}
-                  <span className={classes.suggestionType}>
-                    {suggestion.type === 'category' ? 'in Category' : 'in Subcategory'}
-                  </span>
-                </span>
-              )}
-            </ListItem>
-          ))}
-          <ListItem disabled>
-            <Typography variant="body2">
-              View all results for "{text}"
-            </Typography>
-          </ListItem>
-        </List>
-      )}
-    </Box>
-  );
-};
-
-
-export default Search;
-</file>
-
 <file path="client/src/Components/Home/Banner.jsx">
 import Carousel from 'react-material-ui-carousel'
 import { makeStyles } from '@material-ui/core'
@@ -1921,675 +1705,6 @@ const LoginDialog = ({ open, setOpen, setAccount }) => {
 };
 
 export default LoginDialog;
-</file>
-
-<file path="client/src/Components/SearchResults/SearchResultsPage.jsx">
-import React, { useState, useEffect } from 'react';
-import { 
-    Box, 
-    Grid, 
-    Typography, 
-    makeStyles, 
-    Card, 
-    Chip,
-    CircularProgress,
-    FormControl,
-    FormLabel,
-    FormControlLabel,
-    Checkbox,
-    Slider,
-    TextField,
-    MenuItem,
-    Select,
-    Button,
-    Accordion,
-    AccordionSummary,
-    AccordionDetails
-} from '@material-ui/core';
-import { useLocation, Link } from 'react-router-dom';
-import { Star, ExpandMore } from '@material-ui/icons';
-import axios from 'axios';
-
-const useStyles = makeStyles(theme => ({
-    container: {
-        padding: '20px',
-        background: '#f1f3f6',
-        minHeight: '100vh',
-        marginTop: 55
-    },
-    mainContent: {
-        display: 'flex',
-        gap: '20px'
-    },
-    filterSidebar: {
-        width: '300px',
-        background: '#fff',
-        padding: '16px',
-        borderRadius: '2px',
-        alignSelf: 'flex-start',
-        position: 'sticky',
-        top: '75px',
-        maxHeight: 'calc(100vh - 100px)',
-        overflowY: 'auto'
-    },
-    resultsContainer: {
-        flex: 1
-    },
-    searchHeader: {
-        background: '#fff',
-        padding: '16px 24px',
-        marginBottom: '12px',
-        borderRadius: '2px',
-        boxShadow: '0 1px 3px 0 rgba(0,0,0,.1)'
-    },
-    resultsCount: {
-        fontSize: '14px',
-        color: '#878787'
-    },
-    searchTerm: {
-        fontSize: '16px',
-        fontWeight: 500,
-        color: '#212121'
-    },
-    productCard: {
-        background: '#fff',
-        marginBottom: '12px',
-        padding: '16px',
-        cursor: 'pointer',
-        transition: 'all 0.3s ease',
-        border: '1px solid #f0f0f0',
-        '&:hover': {
-            boxShadow: '0 2px 8px 0 rgba(0,0,0,.12)',
-            transform: 'translateY(-1px)'
-        }
-    },
-    productImage: {
-        width: '200px',
-        height: '200px',
-        objectFit: 'contain',
-        [theme.breakpoints.down('sm')]: {
-            width: '150px',
-            height: '150px'
-        }
-    },
-    productDetails: {
-        padding: '0 16px',
-        flex: 1
-    },
-    productTitle: {
-        fontSize: '16px',
-        fontWeight: 400,
-        color: '#212121',
-        lineHeight: '1.4',
-        marginBottom: '8px',
-        display: '-webkit-box',
-        '-webkit-line-clamp': 2,
-        '-webkit-box-orient': 'vertical',
-        overflow: 'hidden'
-    },
-    ratingContainer: {
-        display: 'flex',
-        alignItems: 'center',
-        marginBottom: '8px'
-    },
-    rating: {
-        background: '#388e3c',
-        color: '#fff',
-        padding: '2px 6px',
-        borderRadius: '3px',
-        fontSize: '12px',
-        fontWeight: 500,
-        display: 'flex',
-        alignItems: 'center',
-        marginRight: '8px'
-    },
-    priceContainer: {
-        display: 'flex',
-        alignItems: 'center',
-        marginBottom: '8px'
-    },
-    currentPrice: {
-        fontSize: '16px',
-        fontWeight: 500,
-        color: '#212121',
-        marginRight: '8px'
-    },
-    originalPrice: {
-        fontSize: '14px',
-        color: '#878787',
-        textDecoration: 'line-through',
-        marginRight: '8px'
-    },
-    discount: {
-        fontSize: '14px',
-        color: '#388e3c',
-        fontWeight: 500
-    },
-    features: {
-        fontSize: '14px',
-        color: '#878787',
-        lineHeight: '1.4'
-    },
-    loadingContainer: {
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '300px'
-    },
-    noResults: {
-        textAlign: 'center',
-        padding: '60px 20px',
-        background: '#fff',
-        borderRadius: '2px'
-    },
-    filterTitle: {
-        fontSize: '14px',
-        fontWeight: 600,
-        marginBottom: '12px',
-        color: '#212121'
-    },
-    priceSlider: {
-        margin: '10px 0',
-        color: '#2874f0'
-    },
-    priceInputs: {
-        display: 'flex',
-        gap: '10px',
-        alignItems: 'center',
-        marginTop: '10px'
-    },
-    priceInput: {
-        width: '80px'
-    },
-    clearFilters: {
-        marginTop: '20px',
-        color: '#2874f0',
-        borderColor: '#2874f0'
-    },
-    sortSelect: {
-        minWidth: '200px',
-        marginBottom: '16px'
-    },
-    sortContainer: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '16px'
-    }
-}));
-
-const SearchResultsPage = () => {
-    const classes = useStyles();
-    const location = useLocation();
-    const [products, setProducts] = useState([]);
-    const [filteredProducts, setFilteredProducts] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState('');
-
-    // Filter states
-    const [priceRange, setPriceRange] = useState([0, 100000]);
-    const [selectedBrands, setSelectedBrands] = useState([]);
-    const [selectedCategories, setSelectedCategories] = useState([]);
-    const [minRating, setMinRating] = useState(0);
-    const [sortBy, setSortBy] = useState('relevance');
-
-    // Available filter options
-    const [availableBrands, setAvailableBrands] = useState([]);
-    const [availableCategories, setAvailableCategories] = useState([]);
-
-    // Extract search query from URL parameters
-    useEffect(() => {
-        const urlParams = new URLSearchParams(location.search);
-        const query = urlParams.get('q') || '';
-        setSearchTerm(query);
-
-        if (query) {
-            fetchSearchResults(query);
-        }
-    }, [location.search]);
-
-    const fetchSearchResults = async (query) => {
-        setLoading(true);
-        try {
-            const userId = '123';
-            const { data } = await axios.get(`http://localhost:8000/search?q=${query}&userId=${userId}`);
-            
-            // Get full product details for each search result
-            const detailedProducts = await Promise.all(
-                data.map(async (item) => {
-                    try {
-                        const productResponse = await axios.get(`http://localhost:8000/product/${item.id}`);
-                        return productResponse.data;
-                    } catch (error) {
-                        console.error(`Error fetching product ${item.id}:`, error);
-                        return null;
-                    }
-                })
-            );
-
-            const validProducts = detailedProducts.filter(product => product !== null);
-            setProducts(validProducts);
-            setFilteredProducts(validProducts);
-
-            // Extract unique brands and categories
-            const brands = [...new Set(validProducts.map(p => p.brand).filter(Boolean))];
-            const categories = [...new Set(validProducts.map(p => p.category).filter(Boolean))];
-            setAvailableBrands(brands);
-            setAvailableCategories(categories);
-
-            // Set price range based on products
-            const prices = validProducts.map(p => p.price?.cost || 0).filter(p => p > 0);
-            if (prices.length > 0) {
-                const minPrice = Math.min(...prices);
-                const maxPrice = Math.max(...prices);
-                setPriceRange([minPrice, maxPrice]);
-            }
-
-        } catch (error) {
-            console.error('Error fetching search results:', error);
-            setProducts([]);
-            setFilteredProducts([]);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // Apply filters whenever filter states change
-    useEffect(() => {
-        applyFilters();
-    }, [products, priceRange, selectedBrands, selectedCategories, minRating, sortBy]);
-
-    const applyFilters = () => {
-        let filtered = [...products];
-
-        // Price filter
-        filtered = filtered.filter(product => {
-            const price = product.price?.cost || 0;
-            return price >= priceRange[0] && price <= priceRange[1];
-        });
-
-        // Brand filter
-        if (selectedBrands.length > 0) {
-            filtered = filtered.filter(product => 
-                selectedBrands.includes(product.brand)
-            );
-        }
-
-        // Category filter
-        if (selectedCategories.length > 0) {
-            filtered = filtered.filter(product => 
-                selectedCategories.includes(product.category)
-            );
-        }
-
-        // Rating filter
-        if (minRating > 0) {
-            filtered = filtered.filter(product => 
-                (product.rating || 0) >= minRating
-            );
-        }
-
-        // Sort products
-        switch (sortBy) {
-            case 'price-low-high':
-                filtered.sort((a, b) => (a.price?.cost || 0) - (b.price?.cost || 0));
-                break;
-            case 'price-high-low':
-                filtered.sort((a, b) => (b.price?.cost || 0) - (a.price?.cost || 0));
-                break;
-            case 'rating':
-                filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0));
-                break;
-            case 'discount':
-                filtered.sort((a, b) => {
-                    const discountA = parseFloat((a.price?.discount || '0%').replace('%', ''));
-                    const discountB = parseFloat((b.price?.discount || '0%').replace('%', ''));
-                    return discountB - discountA;
-                });
-                break;
-            default:
-                // Keep relevance order
-                break;
-        }
-
-        setFilteredProducts(filtered);
-    };
-
-    const handleBrandChange = (brand) => {
-        setSelectedBrands(prev => 
-            prev.includes(brand) 
-                ? prev.filter(b => b !== brand)
-                : [...prev, brand]
-        );
-    };
-
-    const handleCategoryChange = (category) => {
-        setSelectedCategories(prev => 
-            prev.includes(category) 
-                ? prev.filter(c => c !== category)
-                : [...prev, category]
-        );
-    };
-
-    const clearAllFilters = () => {
-        setPriceRange([0, 100000]);
-        setSelectedBrands([]);
-        setSelectedCategories([]);
-        setMinRating(0);
-        setSortBy('relevance');
-    };
-
-    const handleProductClick = async (productId) => {
-        try {
-            await axios.post('http://localhost:8000/click', {
-                userId: '123',
-                productId: productId
-            });
-        } catch (error) {
-            console.error('Error tracking click:', error);
-        }
-    };
-
-    if (loading) {
-        return (
-            <Box className={classes.container}>
-                <Box className={classes.loadingContainer}>
-                    <CircularProgress />
-                </Box>
-            </Box>
-        );
-    }
-
-    return (
-        <Box className={classes.container}>
-            <Box className={classes.mainContent}>
-                {/* Filter Sidebar */}
-                <Box className={classes.filterSidebar}>
-                    <Typography className={classes.filterTitle}>
-                        FILTERS
-                    </Typography>
-
-                    <Button 
-                        variant="outlined" 
-                        size="small" 
-                        className={classes.clearFilters}
-                        onClick={clearAllFilters}
-                    >
-                        Clear All Filters
-                    </Button>
-
-                    {/* Price Filter */}
-                    <Accordion defaultExpanded>
-                        <AccordionSummary expandIcon={<ExpandMore />}>
-                            <Typography className={classes.filterTitle}>PRICE</Typography>
-                        </AccordionSummary>
-                        <AccordionDetails style={{ flexDirection: 'column' }}>
-                            <Slider
-                                value={priceRange}
-                                onChange={(_, newValue) => setPriceRange(newValue)}
-                                valueLabelDisplay="auto"
-                                min={0}
-                                max={100000}
-                                className={classes.priceSlider}
-                                valueLabelFormat={(value) => `₹${value.toLocaleString()}`}
-                            />
-                            <Box className={classes.priceInputs}>
-                                <TextField
-                                    size="small"
-                                    label="Min"
-                                    type="number"
-                                    value={priceRange[0]}
-                                    onChange={(e) => setPriceRange([parseInt(e.target.value) || 0, priceRange[1]])}
-                                    className={classes.priceInput}
-                                />
-                                <Typography>to</Typography>
-                                <TextField
-                                    size="small"
-                                    label="Max"
-                                    type="number"
-                                    value={priceRange[1]}
-                                    onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value) || 100000])}
-                                    className={classes.priceInput}
-                                />
-                            </Box>
-                        </AccordionDetails>
-                    </Accordion>
-
-                    {/* Brand Filter */}
-                    {availableBrands.length > 0 && (
-                        <Accordion defaultExpanded>
-                            <AccordionSummary expandIcon={<ExpandMore />}>
-                                <Typography className={classes.filterTitle}>BRAND</Typography>
-                            </AccordionSummary>
-                            <AccordionDetails style={{ flexDirection: 'column' }}>
-                                <FormControl component="fieldset">
-                                    {availableBrands.map(brand => (
-                                        <FormControlLabel
-                                            key={brand}
-                                            control={
-                                                <Checkbox
-                                                    checked={selectedBrands.includes(brand)}
-                                                    onChange={() => handleBrandChange(brand)}
-                                                    size="small"
-                                                />
-                                            }
-                                            label={brand}
-                                        />
-                                    ))}
-                                </FormControl>
-                            </AccordionDetails>
-                        </Accordion>
-                    )}
-
-                    {/* Category Filter */}
-                    {availableCategories.length > 0 && (
-                        <Accordion defaultExpanded>
-                            <AccordionSummary expandIcon={<ExpandMore />}>
-                                <Typography className={classes.filterTitle}>CATEGORY</Typography>
-                            </AccordionSummary>
-                            <AccordionDetails style={{ flexDirection: 'column' }}>
-                                <FormControl component="fieldset">
-                                    {availableCategories.map(category => (
-                                        <FormControlLabel
-                                            key={category}
-                                            control={
-                                                <Checkbox
-                                                    checked={selectedCategories.includes(category)}
-                                                    onChange={() => handleCategoryChange(category)}
-                                                    size="small"
-                                                />
-                                            }
-                                            label={category}
-                                        />
-                                    ))}
-                                </FormControl>
-                            </AccordionDetails>
-                        </Accordion>
-                    )}
-
-                    {/* Rating Filter */}
-                    <Accordion defaultExpanded>
-                        <AccordionSummary expandIcon={<ExpandMore />}>
-                            <Typography className={classes.filterTitle}>CUSTOMER RATING</Typography>
-                        </AccordionSummary>
-                        <AccordionDetails style={{ flexDirection: 'column' }}>
-                            <FormControl component="fieldset">
-                                {[4, 3, 2, 1].map(rating => (
-                                    <FormControlLabel
-                                        key={rating}
-                                        control={
-                                            <Checkbox
-                                                checked={minRating === rating}
-                                                onChange={() => setMinRating(minRating === rating ? 0 : rating)}
-                                                size="small"
-                                            />
-                                        }
-                                        label={`${rating}★ & above`}
-                                    />
-                                ))}
-                            </FormControl>
-                        </AccordionDetails>
-                    </Accordion>
-                </Box>
-
-                {/* Results Container */}
-                <Box className={classes.resultsContainer}>
-                    {/* Search Header */}
-                    <Box className={classes.searchHeader}>
-                        <Box className={classes.sortContainer}>
-                            <Box>
-                                <Typography className={classes.searchTerm}>
-                                    Search results for "{searchTerm}"
-                                </Typography>
-                                <Typography className={classes.resultsCount}>
-                                    {filteredProducts.length} results found
-                                </Typography>
-                            </Box>
-                            <FormControl size="small" className={classes.sortSelect}>
-                                <Select
-                                    value={sortBy}
-                                    onChange={(e) => setSortBy(e.target.value)}
-                                    displayEmpty
-                                >
-                                    <MenuItem value="relevance">Sort by Relevance</MenuItem>
-                                    <MenuItem value="price-low-high">Price: Low to High</MenuItem>
-                                    <MenuItem value="price-high-low">Price: High to Low</MenuItem>
-                                    <MenuItem value="rating">Customer Rating</MenuItem>
-                                    <MenuItem value="discount">Discount</MenuItem>
-                                </Select>
-                            </FormControl>
-                        </Box>
-                    </Box>
-
-                    {/* Active Filters */}
-                    {(selectedBrands.length > 0 || selectedCategories.length > 0 || minRating > 0) && (
-                        <Box style={{ marginBottom: '12px' }}>
-                            {selectedBrands.map(brand => (
-                                <Chip
-                                    key={brand}
-                                    label={`Brand: ${brand}`}
-                                    onDelete={() => handleBrandChange(brand)}
-                                    style={{ margin: '4px' }}
-                                    size="small"
-                                />
-                            ))}
-                            {selectedCategories.map(category => (
-                                <Chip
-                                    key={category}
-                                    label={`Category: ${category}`}
-                                    onDelete={() => handleCategoryChange(category)}
-                                    style={{ margin: '4px' }}
-                                    size="small"
-                                />
-                            ))}
-                            {minRating > 0 && (
-                                <Chip
-                                    label={`Rating: ${minRating}★ & above`}
-                                    onDelete={() => setMinRating(0)}
-                                    style={{ margin: '4px' }}
-                                    size="small"
-                                />
-                            )}
-                        </Box>
-                    )}
-
-                    {/* Search Results */}
-                    {filteredProducts.length > 0 ? (
-                        <Grid container spacing={0}>
-                            {filteredProducts.map((product) => (
-                                <Grid item xs={12} key={product.id || product._id}>
-                                    <Link 
-                                        to={`/product/${product.id || product._id}`} 
-                                        style={{ textDecoration: 'none' }}
-                                        onClick={() => handleProductClick(product.id || product._id)}
-                                    >
-                                        <Card className={classes.productCard} elevation={0}>
-                                            <Box display="flex">
-                                                {/* Product Image */}
-                                                <Box>
-                                                    <img 
-                                                        src={product.url} 
-                                                        alt={product.title?.longTitle}
-                                                        className={classes.productImage}
-                                                    />
-                                                </Box>
-
-                                                {/* Product Details */}
-                                                <Box className={classes.productDetails}>
-                                                    <Typography className={classes.productTitle}>
-                                                        {product.title?.longTitle}
-                                                    </Typography>
-
-                                                    {/* Rating */}
-                                                    <Box className={classes.ratingContainer}>
-                                                        <Box className={classes.rating}>
-                                                            <Star style={{ fontSize: '12px', marginRight: '2px' }} />
-                                                            {product.rating || 4.2}
-                                                        </Box>
-                                                        <Typography className={classes.reviewCount}>
-                                                            (1,234 reviews)
-                                                        </Typography>
-                                                    </Box>
-
-                                                    {/* Price */}
-                                                    <Box className={classes.priceContainer}>
-                                                        <Typography className={classes.currentPrice}>
-                                                            ₹{product.price?.cost?.toLocaleString('en-IN')}
-                                                        </Typography>
-                                                        <Typography className={classes.originalPrice}>
-                                                            ₹{product.price?.mrp?.toLocaleString('en-IN')}
-                                                        </Typography>
-                                                        <Typography className={classes.discount}>
-                                                            {product.price?.discount} off
-                                                        </Typography>
-                                                    </Box>
-
-                                                    {/* Features */}
-                                                    <Typography className={classes.features}>
-                                                        {product.description ? 
-                                                            product.description.substring(0, 150) + '...' : 
-                                                            'No description available'
-                                                        }
-                                                    </Typography>
-
-                                                    {/* Brand */}
-                                                    {product.brand && (
-                                                        <Box mt={1}>
-                                                            <Chip 
-                                                                label={product.brand} 
-                                                                size="small" 
-                                                                style={{ 
-                                                                    background: '#e3f2fd', 
-                                                                    color: '#1976d2',
-                                                                    fontSize: '11px'
-                                                                }} 
-                                                            />
-                                                        </Box>
-                                                    )}
-                                                </Box>
-                                            </Box>
-                                        </Card>
-                                    </Link>
-                                </Grid>
-                            ))}
-                        </Grid>
-                    ) : (
-                        <Box className={classes.noResults}>
-                            <Typography variant="h6" gutterBottom>
-                                No products found
-                            </Typography>
-                            <Typography color="textSecondary">
-                                Try adjusting your search terms or filters
-                            </Typography>
-                        </Box>
-                    )}
-                </Box>
-            </Box>
-        </Box>
-    );
-};
-
-export default SearchResultsPage;
 </file>
 
 <file path="client/src/Components/default.js">
@@ -4990,26 +4105,6 @@ python scripts/bulk_indexer.py
 python test_client_with_k.py
 </file>
 
-<file path="SRP/docker-compose.yml">
-version: '3.8'
-
-services:
-  srp_api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: flipkart_srp_api
-    ports:
-      - "8000:8000"
-    volumes:
-      - chroma_db_data:/app/db_storage
-    restart: unless-stopped
-    # The 'deploy' section for GPU has been completely removed.
-
-volumes:
-  chroma_db_data:
-</file>
-
 <file path="SRP/Dockerfile">
 # Start with a slim, official Python 3.12 base image
 FROM python:3.12-slim
@@ -5367,512 +4462,215 @@ Thumbs.db
 }
 </file>
 
-<file path="server/controller/search-controller.js">
-import Product from '../model/productSchema.js';
-import Category from '../model/categorySchema.js';
-import { esClient } from '../index.js';
-import { updateUserProfile, getUserProfile, redisClient } from '../database/redis.js';
-import { expandQueryWithAbbreviations } from '../constants/abbreviations.js';
+<file path="client/src/Components/Header/Search.jsx">
+import { useState, useEffect, useRef, useContext } from 'react';
+import { InputBase, List, ListItem, Typography, makeStyles, Box } from '@material-ui/core';
+import SearchIcon from '@material-ui/icons/Search';
+import { useHistory } from 'react-router-dom';
+import axios from 'axios';
+import DOMPurify from 'dompurify';
+import { LoginContext } from '../../context/ContextProvider';
 
-const indexName = 'products';
 
-// UPDATED: Enhanced regex escape to handle trailing/invalid backslashes (double-escape '\')
-function escapeRegex(text) {
-    return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&').replace(/\\/g, '\\\\');
-}
+const useStyle = makeStyles(theme => ({
+  search: {
+    borderRadius: 6,
+    marginLeft: 25,
+    width: '45%',
+    backgroundColor: '#fff',
+    display: 'flex',
+    position: 'relative',
+  },
+  searchIcon: {
+    marginLeft: 'auto',
+    padding: 5,
+    display: 'flex',
+    color: 'blue',
+    cursor: 'pointer',
+  },
+  inputRoot: { fontSize: 'unset', width: '100%' },
+  inputInput: { paddingLeft: 20, width: '100%' },
+  list: {
+    position: 'absolute',
+    color: '#000',
+    backgroundColor: '#fff',
+    marginTop: 36,
+    width: '100%',
+    borderRadius: '0 0 2px 2px',
+    boxShadow: '0 2px 4px 0 rgb(0 0 0 / 20%)',
+    maxHeight: 350,
+    overflowY: 'auto',
+    zIndex: 1000,
+  },
+  suggestionCategory: { fontWeight: 600, color: '#2874f0', paddingLeft: 12 },
+  suggestionType: { fontSize: 12, color: '#666', marginLeft: 8 },
+}));
 
-// --- Personalized Search Controller: Returns ranked products + category suggestions ---
-export const personalizedSearch = async (req, res) => {
-    const { q: searchQuery, userId } = req.query;
-    if (!searchQuery) {
-        return res.status(400).send('Query "q" is required.');
+
+const Search = () => {
+  const classes = useStyle();
+  const history = useHistory();
+  const [text, setText] = useState('');
+  const [results, setResults] = useState([]);
+  const suggestionCache = useRef(new Map());
+  const { account } = useContext(LoginContext);
+
+
+  useEffect(() => {
+    if (!text) {
+      setResults([]);
+      return;
     }
+    const fetchSuggestions = async () => {
+      if (suggestionCache.current.has(text)) {
+        setResults(suggestionCache.current.get(text));
+        return;
+      }
+      try {
+        const { data } = await axios.get(
+          `http://localhost:8000/autosuggest?q=${encodeURIComponent(text)}${account ? `&userId=${encodeURIComponent(account)}` : ''}`
+        );
+        const limitedResults = data.slice(0, 8);
+        setResults(limitedResults);
+        suggestionCache.current.set(text, limitedResults);
+      } catch (error) {
+        console.error("Autosuggest API call failed:", error);
+        setResults([]);
+      }
+    };
+    const timeoutId = setTimeout(fetchSuggestions, 400); // debounce
+    return () => clearTimeout(timeoutId);
+  }, [text, account]);
 
-    // NEW: Expand abbreviations for search
-    const expandedQuery = expandQueryWithAbbreviations(searchQuery);
-    const finalSearchQuery = expandedQuery !== searchQuery ? expandedQuery : searchQuery;
 
-    // UserId is optional; if missing, proceed without personalization
-    let boostProducts = [];
-    try {
-        if (userId) {
-            const profile = await getUserProfile(userId);
-            boostProducts = profile?.clicked_products || [];
+  const handleTextChange = e => setText(e.target.value);
+
+
+  
+const handleSearch = () => {
+    if (text.trim()) {
+      const query = text.trim();
+      // When the user presses Enter, the search query (q) and the original query (oq)
+      // should be the same: the text they typed.
+      // The API will use 'q' for the search.
+      // The UI will use 'oq' for the display text.
+      history.push(`/search?q=${encodeURIComponent(query)}&oq=${encodeURIComponent(query)}`);
+      clearSearch();
+    }
+  };
+
+
+  const clearSearch = () => {
+    setText('');
+    setResults([]);
+  };
+
+
+  const onSuggestionClick = async suggestion => {
+    console.log('Suggestion clicked:', suggestion); // Debug: Log the full suggestion object
+
+
+    if (suggestion.type === 'product') {
+        if (!account) {
+            console.warn('User not logged in - Cannot track click');
+            alert('Please log in to track clicks and get personalized suggestions');
+            return;
         }
-    } catch (redisError) {
-        console.error('Redis error in personalizedSearch:', redisError);
-        // Continue without boosting
-    }
-
-    try {
-        let productResults = [];
-        let categorySuggestions = [];
-
-        // --- Product Search: Elasticsearch, Fallback to Mongo ---
+        if (!suggestion.id) {
+            console.error('No product ID found in suggestion:', suggestion);
+            return;
+        }
         try {
-            // ES - match on product name + category, allow typos, with boosting and highlighting
-            const { hits } = await esClient.search({
-                index: indexName,
-                query: {
-                    bool: {  // Use bool for boosting
-                        should: [
-                            {
-                                multi_match: {
-                                    query: finalSearchQuery, // Use expanded query
-                                    fields: ['name^2', 'name._2gram', 'name._3gram', 'category'],
-                                    fuzziness: 'AUTO',
-                                    type: 'best_fields'
-                                }
-                            },
-                            {
-                                multi_match: {
-                                    query: searchQuery, // Also search original query
-                                    fields: ['name^2', 'name._2gram', 'name._3gram', 'category'],
-                                    fuzziness: 'AUTO',
-                                    type: 'best_fields'
-                                }
-                            },
-                            {
-                                terms: { _id: boostProducts } // Boost user's clicked products
-                            }
-                        ]
-                    }
-                },
-                highlight: {
-                    fields: {
-                        name: { pre_tags: ['<strong>'], post_tags: ['</strong>'] },
-                        category: { pre_tags: ['<strong>'], post_tags: ['</strong>'] }
-                    }
-                },
-                sort: [{ rating: { order: 'desc' } }, '_score'], // Sort by rating + relevance
-                size: 20
+            console.log(`Attempting to track product click for user: ${account}, product: ${suggestion.id}`); // Debug: Before POST
+            await axios.post('http://localhost:8000/click', {
+                userId: account,
+                productId: suggestion.id
             });
-            productResults = hits.hits.map(hit => ({
-                id: hit._id,
-                title: {
-                    longTitle: hit.highlight?.name?.[0] || hit._source.name, // Highlighted
-                    shortTitle: hit.highlight?.category?.[0] || hit._source.category
-                },
-                score: hit._score,
-                rating: hit._source.rating,
-                type: 'product'
-            }));
-        } catch (esError) {
-            console.error('ES error in personalizedSearch:', esError);
-            // Mongo Fallback (case-insensitive substring, with basic boosting)
+            console.log('Product click tracked successfully'); // Debug: After successful POST
+        } catch (e) {
+            console.error('Click tracking failed:', e.response?.data || e.message); // Debug: Log full error
+        }
+        history.push(`/product/${suggestion.id}`);
+    } else {
+        // NEW: Track category/subcategory click
+        if (account) {
             try {
-                const escapedOriginalQuery = escapeRegex(searchQuery);
-                const escapedExpandedQuery = escapeRegex(finalSearchQuery);
-                
-                let products = await Product.find({
-                    $or: [
-                        { 'title.longTitle': { $regex: escapedExpandedQuery, $options: 'i' } },
-                        { 'title.shortTitle': { $regex: escapedExpandedQuery, $options: 'i' } },
-                        { description: { $regex: escapedExpandedQuery, $options: 'i' } },
-                        { 'title.longTitle': { $regex: escapedOriginalQuery, $options: 'i' } },
-                        { 'title.shortTitle': { $regex: escapedOriginalQuery, $options: 'i' } },
-                        { description: { $regex: escapedOriginalQuery, $options: 'i' } }
-                    ]
-                }).sort({ rating: -1 }).limit(20); // Sort by rating descending
-
-                // Basic boosting: Move clicked products to top
-                products = products.sort((a, b) => 
-                    (boostProducts.includes(b._id.toString()) ? 1 : 0) - (boostProducts.includes(a._id.toString()) ? 1 : 0)
-                );
-
-                // Pseudo-highlighting: Wrap matched terms
-                productResults = products.map(product => {
-                    const longTitle = product.title.longTitle
-                        .replace(new RegExp(escapedExpandedQuery, 'gi'), match => `<strong>${match}</strong>`)
-                        .replace(new RegExp(escapedOriginalQuery, 'gi'), match => `<strong>${match}</strong>`);
-                    const shortTitle = product.title.shortTitle
-                        .replace(new RegExp(escapedExpandedQuery, 'gi'), match => `<strong>${match}</strong>`)
-                        .replace(new RegExp(escapedOriginalQuery, 'gi'), match => `<strong>${match}</strong>`);
-                    return {
-                        id: product._id.toString(),
-                        title: { longTitle, shortTitle },
-                        rating: product.rating,
-                        type: 'product'
-                    };
+                console.log(`Attempting to track category click for user: ${account}, category: ${suggestion.name}`); // Debug
+                await axios.post('http://localhost:8000/click', {
+                    userId: account,
+                    category: suggestion.name  // Send the category/subcategory name
                 });
-            } catch (mongoError) {
-                console.error('Mongo fallback error in personalizedSearch:', mongoError);
-                productResults = []; // Graceful fallback: empty results
+                console.log('Category click tracked successfully');
+            } catch (e) {
+                console.error('Category click tracking failed:', e);
             }
+        } else {
+            console.warn('User not logged in - Skipping category track');
         }
-
-        // --- Category/Subcategory Suggestions (de-duped, both fields) ---
-        try {
-            const escapedOriginalQuery = escapeRegex(searchQuery);
-            const escapedExpandedQuery = escapeRegex(finalSearchQuery);
-            
-            const catMatches = await Category.find({
-                $or: [
-                    { category: { $regex: escapedExpandedQuery, $options: 'i' } },
-                    { subcategory: { $regex: escapedExpandedQuery, $options: 'i' } },
-                    { category: { $regex: escapedOriginalQuery, $options: 'i' } },
-                    { subcategory: { $regex: escapedOriginalQuery, $options: 'i' } }
-                ]
-            }).limit(10);
-            const catSet = new Set();
-            catMatches.forEach(c => {
-                if (c.category && (c.category.toLowerCase().includes(finalSearchQuery.toLowerCase()) || c.category.toLowerCase().includes(searchQuery.toLowerCase())))
-                    catSet.add(JSON.stringify({ type: 'category', name: c.category }));
-                if (c.subcategory && (c.subcategory.toLowerCase().includes(finalSearchQuery.toLowerCase()) || c.subcategory.toLowerCase().includes(searchQuery.toLowerCase())))
-                    catSet.add(JSON.stringify({ type: 'subcategory', name: c.subcategory }));
-            });
-            let categories = Array.from(catSet).map(s => JSON.parse(s));
-
-            // Sort by exact match and limit to top 5 for full search
-            categories = categories.sort((a, b) => {
-                const aMatchOriginal = a.name.toLowerCase() === searchQuery.toLowerCase() ? 1 : 0;
-                const bMatchOriginal = b.name.toLowerCase() === searchQuery.toLowerCase() ? 1 : 0;
-                const aMatchExpanded = a.name.toLowerCase() === finalSearchQuery.toLowerCase() ? 1 : 0;
-                const bMatchExpanded = b.name.toLowerCase() === finalSearchQuery.toLowerCase() ? 1 : 0;
-                return (bMatchOriginal + bMatchExpanded) - (aMatchOriginal + aMatchExpanded);
-            }).slice(0, 5);
-
-            categorySuggestions = categories;
-        } catch (mongoError) {
-            console.error('Mongo category error in personalizedSearch:', mongoError);
-            categorySuggestions = []; // Graceful fallback
-        }
-
-        // --- Compose: category suggestions on top, then product results ---
-        const combinedResults = [...categorySuggestions, ...productResults].slice(0, 20);
-        res.json(combinedResults);
-    } catch (error) {
-        console.error('Search controller error:', error);
-        res.status(500).json({ error: 'Something went wrong during search.' });
+        history.push(`/search?q=${encodeURIComponent(suggestion.name)}`);
     }
+    clearSearch();
+  };
+
+
+
+  return (
+    <Box className={classes.search}>
+      <InputBase
+        placeholder="Search for products, brands and more"
+        classes={{ root: classes.inputRoot, input: classes.inputInput }}
+        value={text}
+        onChange={handleTextChange}
+        onKeyDown={e => { if (e.key === 'Enter') handleSearch(); }}
+        inputProps={{ 'aria-label': 'search' }}
+      />
+      <Box className={classes.searchIcon} onClick={handleSearch}><SearchIcon /></Box>
+      {results.length > 0 && (
+        <List className={classes.list}>
+          {results.map((suggestion, index) => (
+            <ListItem
+              button
+              key={index}
+              onClick={() => onSuggestionClick(suggestion)}
+              style={{ cursor: 'pointer' }}
+            >
+              {typeof suggestion === 'string' ? (
+                <Typography>{suggestion}</Typography>
+              ) : suggestion.type === 'product' ? (
+                <Box>
+                  <span dangerouslySetInnerHTML={{
+                    __html: DOMPurify.sanitize(suggestion.title.longTitle)
+                  }} />
+                  <Typography
+                    variant="body2"
+                    style={{ marginLeft: 10, color: '#888', display: 'inline' }}
+                  >
+                    {suggestion.title.shortTitle}
+                  </Typography>
+                </Box>
+              ) : (
+                <span className={classes.suggestionCategory}>
+                  {suggestion.name}
+                  <span className={classes.suggestionType}>
+                    {suggestion.type === 'category' ? 'in Category' : 'in Subcategory'}
+                  </span>
+                </span>
+              )}
+            </ListItem>
+          ))}
+          <ListItem disabled>
+            <Typography variant="body2">
+              View all results for "{text}"
+            </Typography>
+          </ListItem>
+        </List>
+      )}
+    </Box>
+  );
 };
 
-// --- Click Tracking for personalization ---
-export const trackClick = async (req, res) => {
-    const { userId, productId, category } = req.body;
-    if (!userId) {
-        return res.status(400).json({ message: 'userId is required' });
-    }
 
-    try {
-        // Existing: Update clicked products if productId provided
-        if (productId) {
-            await updateUserProfile(userId, productId);
-
-            // NEW: Track categories from the clicked product (with safe fetch)
-            let product;
-            try {
-                // Skip findById if productId looks like a PID (not 24 hex chars) to avoid CastError
-                if (/^[0-9a-fA-F]{24}$/.test(productId)) {
-                    product = await Product.findById(productId);
-                }
-                // Fallback to pid or id fields (your CSV-based identifiers)
-                if (!product) {
-                    product = await Product.findOne({
-                        $or: [{ pid: productId }, { id: productId }]
-                    });
-                }
-                if (!product) {
-                    console.warn(`Product not found for ID/PID: ${productId} - Skipping category tracking`);
-                }
-            } catch (fetchError) {
-                // Log but don't crash - continue without category tracking
-                console.error(`Error fetching product ${productId}:`, fetchError.message);
-            }
-
-            if (product && (product.category || product.subcategory)) {
-                const categories = [product.category, product.subcategory].filter(Boolean); // Get unique category/subcategory
-                const profile = await getUserProfile(userId); // Reuse existing profile fetch
-                profile.clicked_categories = profile.clicked_categories || [];
-                
-                // Add new categories to the front (for recency), remove duplicates, limit to 10
-                categories.forEach(cat => {
-                    profile.clicked_categories = profile.clicked_categories.filter(c => c !== cat);
-                    profile.clicked_categories.unshift(cat);
-                });
-                profile.clicked_categories = profile.clicked_categories.slice(0, 10); // Limit history
-
-                // NEW: Ensure client is connected before set
-                if (!redisClient.isOpen) await redisClient.connect();
-                await redisClient.set(`user:${userId}`, JSON.stringify(profile)); // Update Redis
-                console.log(`User ${userId} clicked categories updated: ${categories}`);
-            }
-        }
-
-        // NEW: Handle direct category/subcategory clicks (if category provided)
-        if (category) {
-            const profile = await getUserProfile(userId);
-            profile.clicked_categories = profile.clicked_categories || [];
-            
-            // Add new category to the front (for recency), remove duplicates, limit to 10
-            profile.clicked_categories = profile.clicked_categories.filter(c => c !== category);
-            profile.clicked_categories.unshift(category);
-            profile.clicked_categories = profile.clicked_categories.slice(0, 10); // Limit history
-
-            // Ensure client is connected before set
-            if (!redisClient.isOpen) await redisClient.connect();
-            await redisClient.set(`user:${userId}`, JSON.stringify(profile)); // Update Redis
-            console.log(`User ${userId} clicked category updated: ${category}`);
-        }
-
-        return res.status(200).json({ message: 'Click tracked successfully' });
-    } catch (error) {
-        console.error('trackClick error:', error);
-        return res.status(500).json({ message: 'Failed to track click' });
-    }
-};
-
-// --- Autosuggest for search bar: concise categories + product titles ---
-export const autosuggest = async (req, res) => {
-    const { q } = req.query;
-    if (!q || !q.trim()) return res.json([]);
-    
-    const originalQuery = q.trim();
-    const query = originalQuery.toLowerCase();
-    
-    // NEW: Expand abbreviations
-    const expandedQuery = expandQueryWithAbbreviations(originalQuery);
-    const searchQuery = expandedQuery !== originalQuery ? expandedQuery.toLowerCase() : query;
-
-    // UserId is optional
-    let boostProducts = [];
-    let boostCategories = []; // NEW: For category boosting
-    try {
-        const userId = req.query.userId;
-        if (userId) {
-            const profile = await getUserProfile(userId);
-            boostProducts = profile?.clicked_products || [];
-            boostCategories = profile?.clicked_categories || []; // Fetch clicked categories
-        }
-    } catch (redisError) {
-        console.error('Redis error in autosuggest:', redisError);
-        // Continue without boosting
-    }
-
-    try {
-        const escapedQuery = escapeRegex(searchQuery);
-        const escapedOriginalQuery = escapeRegex(query);
-
-        // Elasticsearch: search with both original and expanded queries
-        const { hits } = await esClient.search({
-            index: indexName,
-            query: {
-                bool: {  // Use bool query for boosting
-                    should: [
-                        {
-                            multi_match: {
-                                query: searchQuery, // Use expanded query
-                                fields: ['name^2', 'category'],
-                                fuzziness: 'AUTO',
-                                type: 'best_fields'
-                            }
-                        },
-                        {
-                            multi_match: {
-                                query: query, // Also search original query
-                                fields: ['name^2', 'category'],
-                                fuzziness: 'AUTO',
-                                type: 'best_fields'
-                            }
-                        },
-                        {
-                            terms: { _id: boostProducts } // Boost user's clicked products
-                        }
-                    ]
-                }
-            },
-            highlight: {
-                fields: {
-                    name: { pre_tags: ['<strong>'], post_tags: ['</strong>'] },
-                    category: { pre_tags: ['<strong>'], post_tags: ['</strong>'] }
-                }
-            },
-            sort: [{ rating: { order: 'desc' } }, '_score'], // Combine rating with relevance score
-            size: 8
-        });
-
-        let productSuggestions = hits.hits.map(hit => {
-            const nameLower = (hit._source.name || '').toLowerCase();
-            const categoryLower = (hit._source.category || '').toLowerCase();
-            let score = 0;
-            
-            // Personalized boost (only for products)
-            if (boostProducts.includes(hit._id)) score += 1000;
-            
-            // Score for both original and expanded queries
-            if (nameLower === searchQuery || nameLower === query) score += 900;
-            else if (nameLower.startsWith(searchQuery) || nameLower.startsWith(query)) score += 500;
-            else if (nameLower.includes(searchQuery) || nameLower.includes(query)) score += 100;
-            
-            // Additional for category
-            if (categoryLower.startsWith(searchQuery) || categoryLower.startsWith(query)) score += 200;
-            else if (categoryLower.includes(searchQuery) || categoryLower.includes(query)) score += 50;
-            
-            return {
-                type: 'product',
-                id: hit._id,
-                title: {
-                    longTitle: hit.highlight?.name?.[0] || hit._source.name, // Use highlighted if available
-                    shortTitle: hit.highlight?.category?.[0] || hit._source.category
-                },
-                rating: hit._source.rating, // Include rating for debugging if needed
-                score
-            };
-        });
-
-        // Sort products by score descending
-        productSuggestions.sort((a, b) => b.score - a.score);
-
-        // Category/Subcategory suggestions with abbreviation expansion
-        try {
-            const catMatches = await Category.find({
-                $or: [
-                    { category: { $regex: escapedQuery, $options: 'i' } },
-                    { subcategory: { $regex: escapedQuery, $options: 'i' } },
-                    { category: { $regex: escapedOriginalQuery, $options: 'i' } },
-                    { subcategory: { $regex: escapedOriginalQuery, $options: 'i' } }
-                ]
-            }); // No limit here - fetch all potential matches
-
-            const cats = [];
-            catMatches.forEach(c => {
-                if (c.category && (c.category.toLowerCase().includes(searchQuery) || c.category.toLowerCase().includes(query)))
-                    cats.push({ type: 'category', name: c.category });
-                if (c.subcategory && (c.subcategory.toLowerCase().includes(searchQuery) || c.subcategory.toLowerCase().includes(query)))
-                    cats.push({ type: 'subcategory', name: c.subcategory });
-            });
-
-            // UPDATED: Apply scoring for categories
-            let scoredCats = cats.map(cat => {
-                const nameLower = cat.name.toLowerCase();
-                let score = 0;
-                
-                // Personalized boost
-                if (boostCategories.includes(cat.name)) score += 1000;
-                
-                // Check both original and expanded queries
-                if (nameLower === searchQuery || nameLower === query) score += 900;
-                else if (nameLower.startsWith(searchQuery) || nameLower.startsWith(query)) score += 500;
-                else if (nameLower.includes(searchQuery) || nameLower.includes(query)) score += 100;
-                
-                return { ...cat, score };
-            });
-
-            // Sort by score descending
-            scoredCats.sort((a, b) => b.score - a.score);
-
-            const categories = Array.from(new Set(scoredCats.map(x => JSON.stringify({ type: x.type, name: x.name })))).map(x => JSON.parse(x)).slice(0, 3); // Limit to top 3 AFTER sorting
-
-            // Combine, keeping categories above products, max 8 total
-            const finalSuggestions = [...categories, ...productSuggestions.slice(0, 5)].slice(0, 8);
-            return res.json(finalSuggestions);
-        } catch (mongoError) {
-            console.error('Mongo category error in autosuggest:', mongoError);
-            return res.json([]); // Graceful fallback
-        }
-    } catch (err) {
-        console.error('ES error in autosuggest:', err);
-        // MongoDB fallback: similar logic, sorted by rating descending
-        try {
-            const escapedQuery = escapeRegex(searchQuery);
-            const escapedOriginalQuery = escapeRegex(query);
-            
-            let products = await Product.find({
-                $or: [
-                    { 'title.longTitle': { $regex: escapedQuery, $options: 'i' } },
-                    { 'title.shortTitle': { $regex: escapedQuery, $options: 'i' } },
-                    { 'title.longTitle': { $regex: escapedOriginalQuery, $options: 'i' } },
-                    { 'title.shortTitle': { $regex: escapedOriginalQuery, $options: 'i' } }
-                ]
-            }).sort({ rating: -1 }) // Sort by rating descending
-              .limit(5); // Limit to top 5 highest-rated
-
-            // Basic boosting: Move clicked products to top
-            products = products.sort((a, b) => 
-                (boostProducts.includes(b._id.toString()) ? 1 : 0) - (boostProducts.includes(a._id.toString()) ? 1 : 0)
-            );
-
-            // Pseudo-highlighting: Wrap matched terms
-            let productSuggestions = products.map(p => {
-                const longTitleLower = p.title.longTitle.toLowerCase();
-                const shortTitleLower = p.title.shortTitle.toLowerCase();
-                let score = 0;
-                
-                // Personalized boost
-                if (boostProducts.includes(p._id.toString())) score += 1000;
-                
-                // Score for both original and expanded queries
-                if (longTitleLower === searchQuery || longTitleLower === query) score += 900;
-                else if (longTitleLower.startsWith(searchQuery) || longTitleLower.startsWith(query)) score += 500;
-                else if (longTitleLower.includes(searchQuery) || longTitleLower.includes(query)) score += 100;
-                
-                // Additional for shortTitle
-                if (shortTitleLower.startsWith(searchQuery) || shortTitleLower.startsWith(query)) score += 200;
-                else if (shortTitleLower.includes(searchQuery) || shortTitleLower.includes(query)) score += 50;
-                
-                const longTitle = p.title.longTitle
-                    .replace(new RegExp(escapedQuery, 'gi'), match => `<strong>${match}</strong>`)
-                    .replace(new RegExp(escapedOriginalQuery, 'gi'), match => `<strong>${match}</strong>`);
-                const shortTitle = p.title.shortTitle
-                    .replace(new RegExp(escapedQuery, 'gi'), match => `<strong>${match}</strong>`)
-                    .replace(new RegExp(escapedOriginalQuery, 'gi'), match => `<strong>${match}</strong>`);
-                return {
-                    type: 'product',
-                    id: p._id.toString(),
-                    title: { longTitle, shortTitle },
-                    rating: p.rating, // Include rating for debugging if needed
-                    score
-                };
-            });
-
-            // Sort products by score descending
-            productSuggestions.sort((a, b) => b.score - a.score);
-
-            const catMatches = await Category.find({
-                $or: [
-                    { category: { $regex: escapedQuery, $options: 'i' } },
-                    { subcategory: { $regex: escapedQuery, $options: 'i' } },
-                    { category: { $regex: escapedOriginalQuery, $options: 'i' } },
-                    { subcategory: { $regex: escapedOriginalQuery, $options: 'i' } }
-                ]
-            }); // No limit
-            const cats = [];
-            catMatches.forEach(c => {
-                if (c.category && (c.category.toLowerCase().includes(searchQuery) || c.category.toLowerCase().includes(query)))
-                    cats.push({ type: 'category', name: c.category });
-                if (c.subcategory && (c.subcategory.toLowerCase().includes(searchQuery) || c.subcategory.toLowerCase().includes(query)))
-                    cats.push({ type: 'subcategory', name: c.subcategory });
-            });
-
-            // Apply scoring for categories with abbreviation support
-            let scoredCats = cats.map(cat => {
-                const nameLower = cat.name.toLowerCase();
-                let score = 0;
-                
-                // Personalized boost
-                if (boostCategories.includes(cat.name)) score += 1000;
-                
-                // Check both original and expanded queries
-                if (nameLower === searchQuery || nameLower === query) score += 900;
-                else if (nameLower.startsWith(searchQuery) || nameLower.startsWith(query)) score += 500;
-                else if (nameLower.includes(searchQuery) || nameLower.includes(query)) score += 100;
-                
-                return { ...cat, score };
-            });
-
-            // Sort by score descending
-            scoredCats.sort((a, b) => b.score - a.score);
-
-            const categories = Array.from(new Set(scoredCats.map(x => JSON.stringify({ type: x.type, name: x.name })))).map(x => JSON.parse(x)).slice(0, 3); // Limit to top 3 AFTER sorting
-
-            const final = [...categories, ...productSuggestions].slice(0, 8);
-            return res.json(final);
-        } catch (mongoError) {
-            console.error('Mongo fallback error in autosuggest:', mongoError);
-            return res.json([]); // Graceful fallback
-        }
-    }
-};
+export default Search;
 </file>
 
 <file path="SRP/scripts/bulk_indexer.py">
@@ -5987,6 +4785,26 @@ def main():
 
 if __name__ == "__main__":
     main()
+</file>
+
+<file path="SRP/docker-compose.yml">
+version: '3.8'
+
+services:
+  srp_api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: flipkart_srp_api
+    ports:
+      - "8001:8000"
+    volumes:
+      - chroma_db_data:/app/db_storage
+    restart: unless-stopped
+    # The 'deploy' section for GPU has been completely removed.
+
+volumes:
+  chroma_db_data:
 </file>
 
 <file path="README.md">
@@ -6402,6 +5220,1065 @@ POST /click
   * **Performance Focused**: Optimized for speed, low latency, and scalability.
   * **Innovation**: Novel abbreviation mapping and a hybrid scoring algorithm.
   * **Comprehensive**: A full-stack solution with detailed documentation and diagrams.
+</file>
+
+<file path="client/src/Components/SearchResults/SearchResultsPage.jsx">
+import React, { useState, useEffect } from 'react';
+import { 
+    Box, 
+    Grid, 
+    Typography, 
+    makeStyles, 
+    Card, 
+    Chip,
+    CircularProgress,
+    FormControl,
+    FormLabel,
+    FormControlLabel,
+    Checkbox,
+    Slider,
+    TextField,
+    MenuItem,
+    Select,
+    Button,
+    Accordion,
+    AccordionSummary,
+    AccordionDetails
+} from '@material-ui/core';
+import { useLocation, Link } from 'react-router-dom';
+import { Star, ExpandMore } from '@material-ui/icons';
+import axios from 'axios';
+
+const useStyles = makeStyles(theme => ({
+    container: {
+        padding: '20px',
+        background: '#f1f3f6',
+        minHeight: '100vh',
+        marginTop: 55
+    },
+    mainContent: {
+        display: 'flex',
+        gap: '20px'
+    },
+    filterSidebar: {
+        width: '300px',
+        background: '#fff',
+        padding: '16px',
+        borderRadius: '2px',
+        alignSelf: 'flex-start',
+        position: 'sticky',
+        top: '75px',
+        maxHeight: 'calc(100vh - 100px)',
+        overflowY: 'auto'
+    },
+    resultsContainer: {
+        flex: 1
+    },
+    searchHeader: {
+        background: '#fff',
+        padding: '16px 24px',
+        marginBottom: '12px',
+        borderRadius: '2px',
+        boxShadow: '0 1px 3px 0 rgba(0,0,0,.1)'
+    },
+    resultsCount: {
+        fontSize: '14px',
+        color: '#878787'
+    },
+    searchTerm: {
+        fontSize: '16px',
+        fontWeight: 500,
+        color: '#212121'
+    },
+    productCard: {
+        background: '#fff',
+        marginBottom: '12px',
+        padding: '16px',
+        cursor: 'pointer',
+        transition: 'all 0.3s ease',
+        border: '1px solid #f0f0f0',
+        '&:hover': {
+            boxShadow: '0 2px 8px 0 rgba(0,0,0,.12)',
+            transform: 'translateY(-1px)'
+        }
+    },
+    productImage: {
+        width: '200px',
+        height: '200px',
+        objectFit: 'contain',
+        [theme.breakpoints.down('sm')]: {
+            width: '150px',
+            height: '150px'
+        }
+    },
+    productDetails: {
+        padding: '0 16px',
+        flex: 1
+    },
+    productTitle: {
+        fontSize: '16px',
+        fontWeight: 400,
+        color: '#212121',
+        lineHeight: '1.4',
+        marginBottom: '8px',
+        display: '-webkit-box',
+        '-webkit-line-clamp': 2,
+        '-webkit-box-orient': 'vertical',
+        overflow: 'hidden'
+    },
+    ratingContainer: {
+        display: 'flex',
+        alignItems: 'center',
+        marginBottom: '8px'
+    },
+    rating: {
+        background: '#388e3c',
+        color: '#fff',
+        padding: '2px 6px',
+        borderRadius: '3px',
+        fontSize: '12px',
+        fontWeight: 500,
+        display: 'flex',
+        alignItems: 'center',
+        marginRight: '8px'
+    },
+    priceContainer: {
+        display: 'flex',
+        alignItems: 'center',
+        marginBottom: '8px'
+    },
+    currentPrice: {
+        fontSize: '16px',
+        fontWeight: 500,
+        color: '#212121',
+        marginRight: '8px'
+    },
+    originalPrice: {
+        fontSize: '14px',
+        color: '#878787',
+        textDecoration: 'line-through',
+        marginRight: '8px'
+    },
+    discount: {
+        fontSize: '14px',
+        color: '#388e3c',
+        fontWeight: 500
+    },
+    features: {
+        fontSize: '14px',
+        color: '#878787',
+        lineHeight: '1.4'
+    },
+    loadingContainer: {
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '300px'
+    },
+    noResults: {
+        textAlign: 'center',
+        padding: '60px 20px',
+        background: '#fff',
+        borderRadius: '2px'
+    },
+    filterTitle: {
+        fontSize: '14px',
+        fontWeight: 600,
+        marginBottom: '12px',
+        color: '#212121'
+    },
+    priceSlider: {
+        margin: '10px 0',
+        color: '#2874f0'
+    },
+    priceInputs: {
+        display: 'flex',
+        gap: '10px',
+        alignItems: 'center',
+        marginTop: '10px'
+    },
+    priceInput: {
+        width: '80px'
+    },
+    clearFilters: {
+        marginTop: '20px',
+        color: '#2874f0',
+        borderColor: '#2874f0'
+    },
+    sortSelect: {
+        minWidth: '200px',
+        marginBottom: '16px'
+    },
+    sortContainer: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '16px'
+    }
+}));
+
+const SearchResultsPage = () => {
+    const classes = useStyles();
+    const location = useLocation();
+    const [products, setProducts] = useState([]);
+    const [filteredProducts, setFilteredProducts] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
+
+    // Filter states
+    const [priceRange, setPriceRange] = useState([0, 100000]);
+    const [selectedBrands, setSelectedBrands] = useState([]);
+    const [selectedCategories, setSelectedCategories] = useState([]);
+    const [minRating, setMinRating] = useState(0);
+    const [sortBy, setSortBy] = useState('relevance');
+
+    // Available filter options
+    const [availableBrands, setAvailableBrands] = useState([]);
+    const [availableCategories, setAvailableCategories] = useState([]);
+
+    // Extract search query from URL parameters
+    useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const query = urlParams.get('q') || ''; // The query for the API
+    const originalQuery = urlParams.get('oq'); // The query for display
+
+    // Use the original query for display if it exists, otherwise fall back to the main query
+    setSearchTerm(originalQuery || query);
+
+    // The API call still uses the high-quality 'q' parameter
+    if (query) {
+        fetchSearchResults(query);
+    }
+}, [location.search]);
+
+   const fetchSearchResults = async (query) => {
+    setLoading(true);
+    try {
+        // This user ID is hardcoded in your original file, keeping it for consistency.
+        const userId = '123'; 
+        const { data } = await axios.get(`http://localhost:8000/search?q=${query}&userId=${userId}`);
+        
+        // The 'data' variable now contains the final array of full product objects.
+        // We can use it directly.
+        const validProducts = data.filter(product => product !== null);
+
+        setProducts(validProducts);
+        setFilteredProducts(validProducts);
+
+        // Extract unique brands and categories from the results
+        const brands = [...new Set(validProducts.map(p => p.brand).filter(Boolean))];
+        const categories = [...new Set(validProducts.map(p => p.category).filter(Boolean))];
+        setAvailableBrands(brands);
+        setAvailableCategories(categories);
+
+        // Set price range based on products
+        const prices = validProducts.map(p => p.price?.cost || 0).filter(p => p > 0);
+        if (prices.length > 0) {
+            const minPrice = Math.floor(Math.min(...prices));
+            const maxPrice = Math.ceil(Math.max(...prices));
+            // Ensure min is not greater than max
+            setPriceRange([minPrice > maxPrice ? maxPrice : minPrice, maxPrice]);
+        }
+
+    } catch (error) {
+        console.error('Error fetching search results:', error);
+        setProducts([]);
+        setFilteredProducts([]);
+    } finally {
+        setLoading(false);
+    }
+};
+
+    // Apply filters whenever filter states change
+    useEffect(() => {
+        applyFilters();
+    }, [products, priceRange, selectedBrands, selectedCategories, minRating, sortBy]);
+
+    const applyFilters = () => {
+        let filtered = [...products];
+
+        // Price filter
+        filtered = filtered.filter(product => {
+            const price = product.price?.cost || 0;
+            return price >= priceRange[0] && price <= priceRange[1];
+        });
+
+        // Brand filter
+        if (selectedBrands.length > 0) {
+            filtered = filtered.filter(product => 
+                selectedBrands.includes(product.brand)
+            );
+        }
+
+        // Category filter
+        if (selectedCategories.length > 0) {
+            filtered = filtered.filter(product => 
+                selectedCategories.includes(product.category)
+            );
+        }
+
+        // Rating filter
+        if (minRating > 0) {
+            filtered = filtered.filter(product => 
+                (product.rating || 0) >= minRating
+            );
+        }
+
+        // Sort products
+        switch (sortBy) {
+            case 'price-low-high':
+                filtered.sort((a, b) => (a.price?.cost || 0) - (b.price?.cost || 0));
+                break;
+            case 'price-high-low':
+                filtered.sort((a, b) => (b.price?.cost || 0) - (a.price?.cost || 0));
+                break;
+            case 'rating':
+                filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+                break;
+            case 'discount':
+                filtered.sort((a, b) => {
+                    const discountA = parseFloat((a.price?.discount || '0%').replace('%', ''));
+                    const discountB = parseFloat((b.price?.discount || '0%').replace('%', ''));
+                    return discountB - discountA;
+                });
+                break;
+            default:
+                // Keep relevance order
+                break;
+        }
+
+        setFilteredProducts(filtered);
+    };
+
+    const handleBrandChange = (brand) => {
+        setSelectedBrands(prev => 
+            prev.includes(brand) 
+                ? prev.filter(b => b !== brand)
+                : [...prev, brand]
+        );
+    };
+
+    const handleCategoryChange = (category) => {
+        setSelectedCategories(prev => 
+            prev.includes(category) 
+                ? prev.filter(c => c !== category)
+                : [...prev, category]
+        );
+    };
+
+    const clearAllFilters = () => {
+        setPriceRange([0, 100000]);
+        setSelectedBrands([]);
+        setSelectedCategories([]);
+        setMinRating(0);
+        setSortBy('relevance');
+    };
+
+    const handleProductClick = async (productId) => {
+        try {
+            await axios.post('http://localhost:8000/click', {
+                userId: '123',
+                productId: productId
+            });
+        } catch (error) {
+            console.error('Error tracking click:', error);
+        }
+    };
+
+    if (loading) {
+        return (
+            <Box className={classes.container}>
+                <Box className={classes.loadingContainer}>
+                    <CircularProgress />
+                </Box>
+            </Box>
+        );
+    }
+
+    return (
+        <Box className={classes.container}>
+            <Box className={classes.mainContent}>
+                {/* Filter Sidebar */}
+                <Box className={classes.filterSidebar}>
+                    <Typography className={classes.filterTitle}>
+                        FILTERS
+                    </Typography>
+
+                    <Button 
+                        variant="outlined" 
+                        size="small" 
+                        className={classes.clearFilters}
+                        onClick={clearAllFilters}
+                    >
+                        Clear All Filters
+                    </Button>
+
+                    {/* Price Filter */}
+                    <Accordion defaultExpanded>
+                        <AccordionSummary expandIcon={<ExpandMore />}>
+                            <Typography className={classes.filterTitle}>PRICE</Typography>
+                        </AccordionSummary>
+                        <AccordionDetails style={{ flexDirection: 'column' }}>
+                            <Slider
+                                value={priceRange}
+                                onChange={(_, newValue) => setPriceRange(newValue)}
+                                valueLabelDisplay="auto"
+                                min={0}
+                                max={100000}
+                                className={classes.priceSlider}
+                                valueLabelFormat={(value) => `₹${value.toLocaleString()}`}
+                            />
+                            <Box className={classes.priceInputs}>
+                                <TextField
+                                    size="small"
+                                    label="Min"
+                                    type="number"
+                                    value={priceRange[0]}
+                                    onChange={(e) => setPriceRange([parseInt(e.target.value) || 0, priceRange[1]])}
+                                    className={classes.priceInput}
+                                />
+                                <Typography>to</Typography>
+                                <TextField
+                                    size="small"
+                                    label="Max"
+                                    type="number"
+                                    value={priceRange[1]}
+                                    onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value) || 100000])}
+                                    className={classes.priceInput}
+                                />
+                            </Box>
+                        </AccordionDetails>
+                    </Accordion>
+
+                    {/* Brand Filter */}
+                    {availableBrands.length > 0 && (
+                        <Accordion defaultExpanded>
+                            <AccordionSummary expandIcon={<ExpandMore />}>
+                                <Typography className={classes.filterTitle}>BRAND</Typography>
+                            </AccordionSummary>
+                            <AccordionDetails style={{ flexDirection: 'column' }}>
+                                <FormControl component="fieldset">
+                                    {availableBrands.map(brand => (
+                                        <FormControlLabel
+                                            key={brand}
+                                            control={
+                                                <Checkbox
+                                                    checked={selectedBrands.includes(brand)}
+                                                    onChange={() => handleBrandChange(brand)}
+                                                    size="small"
+                                                />
+                                            }
+                                            label={brand}
+                                        />
+                                    ))}
+                                </FormControl>
+                            </AccordionDetails>
+                        </Accordion>
+                    )}
+
+                    {/* Category Filter */}
+                    {availableCategories.length > 0 && (
+                        <Accordion defaultExpanded>
+                            <AccordionSummary expandIcon={<ExpandMore />}>
+                                <Typography className={classes.filterTitle}>CATEGORY</Typography>
+                            </AccordionSummary>
+                            <AccordionDetails style={{ flexDirection: 'column' }}>
+                                <FormControl component="fieldset">
+                                    {availableCategories.map(category => (
+                                        <FormControlLabel
+                                            key={category}
+                                            control={
+                                                <Checkbox
+                                                    checked={selectedCategories.includes(category)}
+                                                    onChange={() => handleCategoryChange(category)}
+                                                    size="small"
+                                                />
+                                            }
+                                            label={category}
+                                        />
+                                    ))}
+                                </FormControl>
+                            </AccordionDetails>
+                        </Accordion>
+                    )}
+
+                    {/* Rating Filter */}
+                    <Accordion defaultExpanded>
+                        <AccordionSummary expandIcon={<ExpandMore />}>
+                            <Typography className={classes.filterTitle}>CUSTOMER RATING</Typography>
+                        </AccordionSummary>
+                        <AccordionDetails style={{ flexDirection: 'column' }}>
+                            <FormControl component="fieldset">
+                                {[4, 3, 2, 1].map(rating => (
+                                    <FormControlLabel
+                                        key={rating}
+                                        control={
+                                            <Checkbox
+                                                checked={minRating === rating}
+                                                onChange={() => setMinRating(minRating === rating ? 0 : rating)}
+                                                size="small"
+                                            />
+                                        }
+                                        label={`${rating}★ & above`}
+                                    />
+                                ))}
+                            </FormControl>
+                        </AccordionDetails>
+                    </Accordion>
+                </Box>
+
+                {/* Results Container */}
+                <Box className={classes.resultsContainer}>
+                    {/* Search Header */}
+                    <Box className={classes.searchHeader}>
+                        <Box className={classes.sortContainer}>
+                            <Box>
+                                <Typography className={classes.searchTerm}>
+                                    Search results for "{searchTerm}"
+                                </Typography>
+                                <Typography className={classes.resultsCount}>
+                                    {filteredProducts.length} results found
+                                </Typography>
+                            </Box>
+                            <FormControl size="small" className={classes.sortSelect}>
+                                <Select
+                                    value={sortBy}
+                                    onChange={(e) => setSortBy(e.target.value)}
+                                    displayEmpty
+                                >
+                                    <MenuItem value="relevance">Sort by Relevance</MenuItem>
+                                    <MenuItem value="price-low-high">Price: Low to High</MenuItem>
+                                    <MenuItem value="price-high-low">Price: High to Low</MenuItem>
+                                    <MenuItem value="rating">Customer Rating</MenuItem>
+                                    <MenuItem value="discount">Discount</MenuItem>
+                                </Select>
+                            </FormControl>
+                        </Box>
+                    </Box>
+
+                    {/* Active Filters */}
+                    {(selectedBrands.length > 0 || selectedCategories.length > 0 || minRating > 0) && (
+                        <Box style={{ marginBottom: '12px' }}>
+                            {selectedBrands.map(brand => (
+                                <Chip
+                                    key={brand}
+                                    label={`Brand: ${brand}`}
+                                    onDelete={() => handleBrandChange(brand)}
+                                    style={{ margin: '4px' }}
+                                    size="small"
+                                />
+                            ))}
+                            {selectedCategories.map(category => (
+                                <Chip
+                                    key={category}
+                                    label={`Category: ${category}`}
+                                    onDelete={() => handleCategoryChange(category)}
+                                    style={{ margin: '4px' }}
+                                    size="small"
+                                />
+                            ))}
+                            {minRating > 0 && (
+                                <Chip
+                                    label={`Rating: ${minRating}★ & above`}
+                                    onDelete={() => setMinRating(0)}
+                                    style={{ margin: '4px' }}
+                                    size="small"
+                                />
+                            )}
+                        </Box>
+                    )}
+
+                    {/* Search Results */}
+                    {filteredProducts.length > 0 ? (
+                        <Grid container spacing={0}>
+                            {filteredProducts.map((product) => (
+                                <Grid item xs={12} key={product.id || product._id}>
+                                    <Link 
+                                        to={`/product/${product.id || product._id}`} 
+                                        style={{ textDecoration: 'none' }}
+                                        onClick={() => handleProductClick(product.id || product._id)}
+                                    >
+                                        <Card className={classes.productCard} elevation={0}>
+                                            <Box display="flex">
+                                                {/* Product Image */}
+                                                <Box>
+                                                    <img 
+                                                        src={product.url} 
+                                                        alt={product.title?.longTitle}
+                                                        className={classes.productImage}
+                                                    />
+                                                </Box>
+
+                                                {/* Product Details */}
+                                                <Box className={classes.productDetails}>
+                                                    <Typography className={classes.productTitle}>
+                                                        {product.title?.longTitle}
+                                                    </Typography>
+
+                                                    {/* Rating */}
+                                                    <Box className={classes.ratingContainer}>
+                                                        <Box className={classes.rating}>
+                                                            <Star style={{ fontSize: '12px', marginRight: '2px' }} />
+                                                            {product.rating || 4.2}
+                                                        </Box>
+                                                        <Typography className={classes.reviewCount}>
+                                                            (1,234 reviews)
+                                                        </Typography>
+                                                    </Box>
+
+                                                    {/* Price */}
+                                                    <Box className={classes.priceContainer}>
+                                                        <Typography className={classes.currentPrice}>
+                                                            ₹{product.price?.cost?.toLocaleString('en-IN')}
+                                                        </Typography>
+                                                        <Typography className={classes.originalPrice}>
+                                                            ₹{product.price?.mrp?.toLocaleString('en-IN')}
+                                                        </Typography>
+                                                        <Typography className={classes.discount}>
+                                                            {product.price?.discount} off
+                                                        </Typography>
+                                                    </Box>
+
+                                                    {/* Features */}
+                                                    <Typography className={classes.features}>
+                                                        {product.description ? 
+                                                            product.description.substring(0, 150) + '...' : 
+                                                            'No description available'
+                                                        }
+                                                    </Typography>
+
+                                                    {/* Brand */}
+                                                    {product.brand && (
+                                                        <Box mt={1}>
+                                                            <Chip 
+                                                                label={product.brand} 
+                                                                size="small" 
+                                                                style={{ 
+                                                                    background: '#e3f2fd', 
+                                                                    color: '#1976d2',
+                                                                    fontSize: '11px'
+                                                                }} 
+                                                            />
+                                                        </Box>
+                                                    )}
+                                                </Box>
+                                            </Box>
+                                        </Card>
+                                    </Link>
+                                </Grid>
+                            ))}
+                        </Grid>
+                    ) : (
+                        <Box className={classes.noResults}>
+                            <Typography variant="h6" gutterBottom>
+                                No products found
+                            </Typography>
+                            <Typography color="textSecondary">
+                                Try adjusting your search terms or filters
+                            </Typography>
+                        </Box>
+                    )}
+                </Box>
+            </Box>
+        </Box>
+    );
+};
+
+export default SearchResultsPage;
+</file>
+
+<file path="server/controller/search-controller.js">
+import Product from '../model/productSchema.js';
+import Category from '../model/categorySchema.js';
+import { esClient } from '../index.js';
+import { updateUserProfile, getUserProfile, redisClient } from '../database/redis.js';
+import { expandQueryWithAbbreviations } from '../constants/abbreviations.js';
+import axios from 'axios'; // <-- Make sure to import axios
+
+const indexName = 'products';
+
+// UPDATED: Enhanced regex escape to handle trailing/invalid backslashes (double-escape '\')
+function escapeRegex(text) {
+    return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&').replace(/\\/g, '\\\\');
+}
+
+// --- Personalized Search Controller: Returns ranked products + category suggestions ---
+export const personalizedSearch = async (req, res) => {
+    const { q: searchQuery } = req.query;
+    if (!searchQuery) {
+        return res.status(400).send('Query "q" is required.');
+    }
+
+    try {
+        // 1. Call the SRP service to get ranked product IDs
+        console.log(`[Node Server] Calling SRP service for query: "${searchQuery}"`);
+        const srpResponse = await axios.post('http://localhost:8001/api/search', {
+            query: searchQuery
+        });
+
+        const ranked_ids = srpResponse.data.ranked_ids;
+
+        if (!ranked_ids || ranked_ids.length === 0) {
+            return res.json([]); // Return empty if SRP found no results
+        }
+
+        console.log(`[Node Server] Received ${ranked_ids.length} ranked IDs from SRP.`);
+
+        // 2. Fetch full product details from MongoDB for the ranked IDs
+        const products = await Product.find({ id: { $in: ranked_ids } });
+
+        // 3. Create a map for quick lookup to preserve the order from SRP
+        const productMap = new Map();
+        products.forEach(product => {
+            // Use 'id' field which corresponds to 'pid' from your CSV
+            productMap.set(product.id, product);
+        });
+
+        // 4. Re-sort the fetched products based on the SRP's ranking
+        const sortedProducts = ranked_ids
+            .map(id => productMap.get(id))
+            .filter(product => product !== undefined); // Filter out any products not found in DB
+
+        console.log(`[Node Server] Returning ${sortedProducts.length} full product objects to client.`);
+        
+        // 5. Respond to the client
+        res.json(sortedProducts);
+
+    } catch (error) {
+        console.error('Error in personalizedSearch calling SRP service:', error.response ? error.response.data : error.message);
+        // Implement a fallback to your old search logic if you want
+        // For now, we just return an error
+        res.status(500).json({ error: 'Failed to retrieve search results.' });
+    }
+};
+
+
+// --- Click Tracking for personalization ---
+export const trackClick = async (req, res) => {
+    const { userId, productId, category } = req.body;
+    if (!userId) {
+        return res.status(400).json({ message: 'userId is required' });
+    }
+
+    try {
+        // Existing: Update clicked products if productId provided
+        if (productId) {
+            await updateUserProfile(userId, productId);
+
+            // NEW: Track categories from the clicked product (with safe fetch)
+            let product;
+            try {
+                // Skip findById if productId looks like a PID (not 24 hex chars) to avoid CastError
+                if (/^[0-9a-fA-F]{24}$/.test(productId)) {
+                    product = await Product.findById(productId);
+                }
+                // Fallback to pid or id fields (your CSV-based identifiers)
+                if (!product) {
+                    product = await Product.findOne({
+                        $or: [{ pid: productId }, { id: productId }]
+                    });
+                }
+                if (!product) {
+                    console.warn(`Product not found for ID/PID: ${productId} - Skipping category tracking`);
+                }
+            } catch (fetchError) {
+                // Log but don't crash - continue without category tracking
+                console.error(`Error fetching product ${productId}:`, fetchError.message);
+            }
+
+            if (product && (product.category || product.subcategory)) {
+                const categories = [product.category, product.subcategory].filter(Boolean); // Get unique category/subcategory
+                const profile = await getUserProfile(userId); // Reuse existing profile fetch
+                profile.clicked_categories = profile.clicked_categories || [];
+                
+                // Add new categories to the front (for recency), remove duplicates, limit to 10
+                categories.forEach(cat => {
+                    profile.clicked_categories = profile.clicked_categories.filter(c => c !== cat);
+                    profile.clicked_categories.unshift(cat);
+                });
+                profile.clicked_categories = profile.clicked_categories.slice(0, 10); // Limit history
+
+                // NEW: Ensure client is connected before set
+                if (!redisClient.isOpen) await redisClient.connect();
+                await redisClient.set(`user:${userId}`, JSON.stringify(profile)); // Update Redis
+                console.log(`User ${userId} clicked categories updated: ${categories}`);
+            }
+        }
+
+        // NEW: Handle direct category/subcategory clicks (if category provided)
+        if (category) {
+            const profile = await getUserProfile(userId);
+            profile.clicked_categories = profile.clicked_categories || [];
+            
+            // Add new category to the front (for recency), remove duplicates, limit to 10
+            profile.clicked_categories = profile.clicked_categories.filter(c => c !== category);
+            profile.clicked_categories.unshift(category);
+            profile.clicked_categories = profile.clicked_categories.slice(0, 10); // Limit history
+
+            // Ensure client is connected before set
+            if (!redisClient.isOpen) await redisClient.connect();
+            await redisClient.set(`user:${userId}`, JSON.stringify(profile)); // Update Redis
+            console.log(`User ${userId} clicked category updated: ${category}`);
+        }
+
+        return res.status(200).json({ message: 'Click tracked successfully' });
+    } catch (error) {
+        console.error('trackClick error:', error);
+        return res.status(500).json({ message: 'Failed to track click' });
+    }
+};
+
+// --- Autosuggest for search bar: concise categories + product titles ---
+export const autosuggest = async (req, res) => {
+    const { q } = req.query;
+    if (!q || !q.trim()) return res.json([]);
+    
+    const originalQuery = q.trim();
+    const query = originalQuery.toLowerCase();
+    
+    // NEW: Expand abbreviations
+    const expandedQuery = expandQueryWithAbbreviations(originalQuery);
+    const searchQuery = expandedQuery !== originalQuery ? expandedQuery.toLowerCase() : query;
+
+    // UserId is optional
+    let boostProducts = [];
+    let boostCategories = []; // NEW: For category boosting
+    try {
+        const userId = req.query.userId;
+        if (userId) {
+            const profile = await getUserProfile(userId);
+            boostProducts = profile?.clicked_products || [];
+            boostCategories = profile?.clicked_categories || []; // Fetch clicked categories
+        }
+    } catch (redisError) {
+        console.error('Redis error in autosuggest:', redisError);
+        // Continue without boosting
+    }
+
+    try {
+        const escapedQuery = escapeRegex(searchQuery);
+        const escapedOriginalQuery = escapeRegex(query);
+
+        // Elasticsearch: search with both original and expanded queries
+        const { hits } = await esClient.search({
+            index: indexName,
+            query: {
+                bool: {  // Use bool query for boosting
+                    should: [
+                        {
+                            multi_match: {
+                                query: searchQuery, // Use expanded query
+                                fields: ['name^2', 'category'],
+                                fuzziness: 'AUTO',
+                                type: 'best_fields'
+                            }
+                        },
+                        {
+                            multi_match: {
+                                query: query, // Also search original query
+                                fields: ['name^2', 'category'],
+                                fuzziness: 'AUTO',
+                                type: 'best_fields'
+                            }
+                        },
+                        {
+                            terms: { _id: boostProducts } // Boost user's clicked products
+                        }
+                    ]
+                }
+            },
+            highlight: {
+                fields: {
+                    name: { pre_tags: ['<strong>'], post_tags: ['</strong>'] },
+                    category: { pre_tags: ['<strong>'], post_tags: ['</strong>'] }
+                }
+            },
+            sort: [{ rating: { order: 'desc' } }, '_score'], // Combine rating with relevance score
+            size: 8
+        });
+
+        let productSuggestions = hits.hits.map(hit => {
+            const nameLower = (hit._source.name || '').toLowerCase();
+            const categoryLower = (hit._source.category || '').toLowerCase();
+            let score = 0;
+            
+            // Personalized boost (only for products)
+            if (boostProducts.includes(hit._id)) score += 1000;
+            
+            // Score for both original and expanded queries
+            if (nameLower === searchQuery || nameLower === query) score += 900;
+            else if (nameLower.startsWith(searchQuery) || nameLower.startsWith(query)) score += 500;
+            else if (nameLower.includes(searchQuery) || nameLower.includes(query)) score += 100;
+            
+            // Additional for category
+            if (categoryLower.startsWith(searchQuery) || categoryLower.startsWith(query)) score += 200;
+            else if (categoryLower.includes(searchQuery) || categoryLower.includes(query)) score += 50;
+            
+            return {
+                type: 'product',
+                id: hit._id,
+                title: {
+                    longTitle: hit.highlight?.name?.[0] || hit._source.name, // Use highlighted if available
+                    shortTitle: hit.highlight?.category?.[0] || hit._source.category
+                },
+                rating: hit._source.rating, // Include rating for debugging if needed
+                score
+            };
+        });
+
+        // Sort products by score descending
+        productSuggestions.sort((a, b) => b.score - a.score);
+
+        // Category/Subcategory suggestions with abbreviation expansion
+        try {
+            const catMatches = await Category.find({
+                $or: [
+                    { category: { $regex: escapedQuery, $options: 'i' } },
+                    { subcategory: { $regex: escapedQuery, $options: 'i' } },
+                    { category: { $regex: escapedOriginalQuery, $options: 'i' } },
+                    { subcategory: { $regex: escapedOriginalQuery, $options: 'i' } }
+                ]
+            }); // No limit here - fetch all potential matches
+
+            const cats = [];
+            catMatches.forEach(c => {
+                if (c.category && (c.category.toLowerCase().includes(searchQuery) || c.category.toLowerCase().includes(query)))
+                    cats.push({ type: 'category', name: c.category });
+                if (c.subcategory && (c.subcategory.toLowerCase().includes(searchQuery) || c.subcategory.toLowerCase().includes(query)))
+                    cats.push({ type: 'subcategory', name: c.subcategory });
+            });
+
+            // UPDATED: Apply scoring for categories
+            let scoredCats = cats.map(cat => {
+                const nameLower = cat.name.toLowerCase();
+                let score = 0;
+                
+                // Personalized boost
+                if (boostCategories.includes(cat.name)) score += 1000;
+                
+                // Check both original and expanded queries
+                if (nameLower === searchQuery || nameLower === query) score += 900;
+                else if (nameLower.startsWith(searchQuery) || nameLower.startsWith(query)) score += 500;
+                else if (nameLower.includes(searchQuery) || nameLower.includes(query)) score += 100;
+                
+                return { ...cat, score };
+            });
+
+            // Sort by score descending
+            scoredCats.sort((a, b) => b.score - a.score);
+
+            const categories = Array.from(new Set(scoredCats.map(x => JSON.stringify({ type: x.type, name: x.name })))).map(x => JSON.parse(x)).slice(0, 3); // Limit to top 3 AFTER sorting
+
+            // Combine, keeping categories above products, max 8 total
+            const finalSuggestions = [...categories, ...productSuggestions.slice(0, 5)].slice(0, 8);
+            return res.json(finalSuggestions);
+        } catch (mongoError) {
+            console.error('Mongo category error in autosuggest:', mongoError);
+            return res.json([]); // Graceful fallback
+        }
+    } catch (err) {
+        console.error('ES error in autosuggest:', err);
+        // MongoDB fallback: similar logic, sorted by rating descending
+        try {
+            const escapedQuery = escapeRegex(searchQuery);
+            const escapedOriginalQuery = escapeRegex(query);
+            
+            let products = await Product.find({
+                $or: [
+                    { 'title.longTitle': { $regex: escapedQuery, $options: 'i' } },
+                    { 'title.shortTitle': { $regex: escapedQuery, $options: 'i' } },
+                    { 'title.longTitle': { $regex: escapedOriginalQuery, $options: 'i' } },
+                    { 'title.shortTitle': { $regex: escapedOriginalQuery, $options: 'i' } }
+                ]
+            }).sort({ rating: -1 }) // Sort by rating descending
+              .limit(5); // Limit to top 5 highest-rated
+
+            // Basic boosting: Move clicked products to top
+            products = products.sort((a, b) => 
+                (boostProducts.includes(b._id.toString()) ? 1 : 0) - (boostProducts.includes(a._id.toString()) ? 1 : 0)
+            );
+
+            // Pseudo-highlighting: Wrap matched terms
+            let productSuggestions = products.map(p => {
+                const longTitleLower = p.title.longTitle.toLowerCase();
+                const shortTitleLower = p.title.shortTitle.toLowerCase();
+                let score = 0;
+                
+                // Personalized boost
+                if (boostProducts.includes(p._id.toString())) score += 1000;
+                
+                // Score for both original and expanded queries
+                if (longTitleLower === searchQuery || longTitleLower === query) score += 900;
+                else if (longTitleLower.startsWith(searchQuery) || longTitleLower.startsWith(query)) score += 500;
+                else if (longTitleLower.includes(searchQuery) || longTitleLower.includes(query)) score += 100;
+                
+                // Additional for shortTitle
+                if (shortTitleLower.startsWith(searchQuery) || shortTitleLower.startsWith(query)) score += 200;
+                else if (shortTitleLower.includes(searchQuery) || shortTitleLower.includes(query)) score += 50;
+                
+                const longTitle = p.title.longTitle
+                    .replace(new RegExp(escapedQuery, 'gi'), match => `<strong>${match}</strong>`)
+                    .replace(new RegExp(escapedOriginalQuery, 'gi'), match => `<strong>${match}</strong>`);
+                const shortTitle = p.title.shortTitle
+                    .replace(new RegExp(escapedQuery, 'gi'), match => `<strong>${match}</strong>`)
+                    .replace(new RegExp(escapedOriginalQuery, 'gi'), match => `<strong>${match}</strong>`);
+                return {
+                    type: 'product',
+                    id: p._id.toString(),
+                    title: { longTitle, shortTitle },
+                    rating: p.rating, // Include rating for debugging if needed
+                    score
+                };
+            });
+
+            // Sort products by score descending
+            productSuggestions.sort((a, b) => b.score - a.score);
+
+            const catMatches = await Category.find({
+                $or: [
+                    { category: { $regex: escapedQuery, $options: 'i' } },
+                    { subcategory: { $regex: escapedQuery, $options: 'i' } },
+                    { category: { $regex: escapedOriginalQuery, $options: 'i' } },
+                    { subcategory: { $regex: escapedOriginalQuery, $options: 'i' } }
+                ]
+            }); // No limit
+            const cats = [];
+            catMatches.forEach(c => {
+                if (c.category && (c.category.toLowerCase().includes(searchQuery) || c.category.toLowerCase().includes(query)))
+                    cats.push({ type: 'category', name: c.category });
+                if (c.subcategory && (c.subcategory.toLowerCase().includes(searchQuery) || c.subcategory.toLowerCase().includes(query)))
+                    cats.push({ type: 'subcategory', name: c.subcategory });
+            });
+
+            // Apply scoring for categories with abbreviation support
+            let scoredCats = cats.map(cat => {
+                const nameLower = cat.name.toLowerCase();
+                let score = 0;
+                
+                // Personalized boost
+                if (boostCategories.includes(cat.name)) score += 1000;
+                
+                // Check both original and expanded queries
+                if (nameLower === searchQuery || nameLower === query) score += 900;
+                else if (nameLower.startsWith(searchQuery) || nameLower.startsWith(query)) score += 500;
+                else if (nameLower.includes(searchQuery) || nameLower.includes(query)) score += 100;
+                
+                return { ...cat, score };
+            });
+
+            // Sort by score descending
+            scoredCats.sort((a, b) => b.score - a.score);
+
+            const categories = Array.from(new Set(scoredCats.map(x => JSON.stringify({ type: x.type, name: x.name })))).map(x => JSON.parse(x)).slice(0, 3); // Limit to top 3 AFTER sorting
+
+            const final = [...categories, ...productSuggestions].slice(0, 8);
+            return res.json(final);
+        } catch (mongoError) {
+            console.error('Mongo fallback error in autosuggest:', mongoError);
+            return res.json([]); // Graceful fallback
+        }
+    }
+};
 </file>
 
 </files>
