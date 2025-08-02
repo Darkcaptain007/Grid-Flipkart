@@ -98,4 +98,11 @@ class SearchService:
         embeddings = self.embed_model.encode(docs, show_progress_bar=True)
         
         # Add to DB
-        self.chroma.add_products(ids, docs, embeddings.tolist(), metadatas)
+        self.chroma.add_items_to_collection(
+            collection_name=self.product_collection_name,
+            ids=ids,
+            documents=docs, # Storing the combined_text as the document
+            embeddings=embeddings.tolist(),
+            metadatas=metadatas
+        )
+        logger.info("Products added successfully.")

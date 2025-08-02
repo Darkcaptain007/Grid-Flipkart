@@ -10,6 +10,7 @@ services:
       - "8001:8000"
     volumes:
       - chroma_db_data:/app/db_storage
+      - ./data:/app/data  # <--- ADD THIS LINE
     restart: unless-stopped
     # The 'deploy' section for GPU has been completely removed.
 
