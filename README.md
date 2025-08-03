@@ -16,7 +16,7 @@ This repository delivers an enterprise-grade, AI-powered personalized e-commerce
 
 | Feature                          | Description                                                                                                                                                             |
 | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ✅ **Semantic Search Pipeline (SRP)** | A Python microservice using ML models to understand the *meaning* behind a query, not just the words. Handles typos and finds related products effortlessly.       |
+| ✅ **Search Results Page Pipeline (SRP)** | A Python microservice using ML models to understand the *meaning* behind a query, not just the words. Handles typos and finds related products effortlessly.       |
 | ✅ **Intent Classification**     | Before searching, the SRP classifies your query (e.g., "cheap running shoes") into a product category ("Men's Sports Shoes") for laser-focused results.                  |
 | ✅ **Intelligent Autosuggest**   | A hybrid system using Elasticsearch provides instant suggestions for products, categories, *and* specific search phrases (e.g., "top load washing machine").           |
 | ✅ **Real-Time Personalization** | Using Redis, the engine tracks user clicks on products and categories to boost their rankings in subsequent searches and suggestions, all in real-time.                 |
@@ -31,32 +31,58 @@ This repository delivers an enterprise-grade, AI-powered personalized e-commerce
 Our architecture is a carefully orchestrated dance between specialized services, ensuring both speed and intelligence. The Node.js server acts as the central gateway, delegating tasks to the optimal engine for the job.
 
 ```mermaid
-graph TB
-    subgraph " "
-        direction LR
-        subgraph "Client Layer"
-            A[<img src='https://www.vectorlogo.zone/logos/reactjs/reactjs-icon.svg' width='30' /><br>React Frontend]
-        end
-        subgraph "Gateway & Caching Layer"
-            B[<img src='https://www.vectorlogo.zone/logos/nodejs/nodejs-icon.svg' width='30' /><br>Node.js API Gateway]
-            C[<img src='https://www.vectorlogo.zone/logos/redis/redis-icon.svg' width='30' /><br>Redis Personalization Cache]
-        end
-        subgraph "Intelligence & Search Layer"
-            D[<img src='https://www.vectorlogo.zone/logos/python/python-icon.svg' width='30' /><br>Python SRP Service]
-            E[<img src='https://www.vectorlogo.zone/logos/elastic/elastic-icon.svg' width='30' /><br>Elasticsearch Autosuggest Engine]
-        end
-        subgraph "Data Persistence Layer"
-            F[<img src='https://www.trychroma.com/favicon.ico' width='30' /><br>ChromaDB Vector Store]
-            G[<img src='https://www.vectorlogo.zone/logos/mongodb/mongodb-icon.svg' width='30' /><br>MongoDB Product & Term Database]
-        end
-    end
-
-    A -- "API Calls" --> B
-    B -- "Real-time Personalization" <--> C
-    B -- "Semantic Search Request" --> D
-    B -- "Fast Autosuggest" --> E
-    B -- "Hydrate Results & Get Term Data" --> G
-    D -- "Vector Search" --> F
+---
+config:
+  layout: dagre
+---
+flowchart LR
+ subgraph Client_Layer["Client Layer"]
+        A@{ label: "<img src=\"https://www.vectorlogo.zone/logos/reactjs/reactjs-icon.svg\" width=\"35\" height=\"35\"><br>React Frontend" }
+  end
+ subgraph Gateway_Cache["Gateway & Caching Layer"]
+        B@{ label: "<img src=\"https://www.vectorlogo.zone/logos/nodejs/nodejs-icon.svg\" width=\"35\" height=\"35\"><br>Node.js API Gateway" }
+        C@{ label: "<img src=\"https://www.vectorlogo.zone/logos/redis/redis-icon.svg\" width=\"35\" height=\"35\"><br>Redis <br>Personalization Cache" }
+  end
+ subgraph Intelligence_Search["Intelligence & Search Layer"]
+        D@{ label: "<img src=\"https://www.vectorlogo.zone/logos/python/python-icon.svg\" width=\"35\" height=\"35\"><br>Python SRP Service" }
+        E@{ label: "<img src=\"https://www.vectorlogo.zone/logos/elastic/elastic-icon.svg\" width=\"35\" height=\"35\"><br>Elasticsearch <br>Autosuggest Engine" }
+        H@{ label: "<img src=\"https://www.svgrepo.com/show/445230/machine-learning-solid.svg\" width=\"35\" height=\"35\"><br>Cross-Encoder Reranker" }
+  end
+ subgraph Data_Persistence["Data Persistence Layer"]
+        F@{ label: "<img src=\"https://www.trychroma.com/favicon.ico\" width=\"35\" height=\"35\"><br>ChromaDB <br>Vector Store" }
+        G@{ label: "<img src=\"https://www.vectorlogo.zone/logos/mongodb/mongodb-icon.svg\" width=\"35\" height=\"35\"><br>MongoDB <br>Product &amp; Term Database" }
+  end
+    A -- API Calls --> B
+    B <-- "Real-time Personalization" --> C
+    B -- Semantic Search Request --> D
+    B -- Fast Autosuggest --> E
+    B -- Hydrate Results & Get Term Data --> G
+    D -- Vector Search --> F
+    F -- Candidate List --> H
+    H -- "Refined, High-Precision Results" --> D
+    A@{ shape: rect}
+    B@{ shape: rect}
+    C@{ shape: rect}
+    D@{ shape: rect}
+    E@{ shape: rect}
+    H@{ shape: rect}
+    F@{ shape: rect}
+    G@{ shape: rect}
+     A:::reactStyle
+     B:::nodejsStyle
+     C:::redisStyle
+     D:::pythonStyle
+     E:::elasticStyle
+     H:::pythonStyle
+     F:::chromaStyle
+     G:::mongoStyle
+    classDef reactStyle fill:#e0f7fa,stroke:#61dafb,stroke-width:1px,color:#333
+    classDef nodejsStyle fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#000
+    classDef redisStyle fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#000
+    classDef pythonStyle fill:#FFF3E0,stroke:#F57C00,stroke-width:2px,color:#000
+    classDef elasticStyle fill:#FFF3E0,stroke:#F57C00,stroke-width:2px,color:#000
+    classDef chromaStyle fill:#F3E5F5,stroke:#6A1B9A,stroke-width:2px,color:#000
+    classDef mongoStyle fill:#F3E5F5,stroke:#6A1B9A,stroke-width:2px,color:#000
 ```
 
 -----
@@ -66,33 +92,66 @@ graph TB
 Our system uses two distinct pipelines for a superior user experience: one for lightning-fast suggestions, and another for deep, intelligent search results.
 
 ```mermaid
+%%{ init: {
+    'theme': 'forest',
+    'themeVariables': {
+        'actorTextColor': '#333',
+        'textColor': '#FFFFFF',
+        'signalTextColor': '#FFFFFF',
+        'noteTextColor': '#333',
+        'actorBorder': '#555',
+        'signalColor': '#008080',
+        'noteBkgColor': '#eef',
+        'fontFamily': 'Arial, sans-serif'
+    }
+} }%%
 sequenceDiagram
+    autonumber
     participant U as User
     participant UI as React Frontend
     participant API as Node.js Gateway
     participant ES as Elasticsearch
     participant SRP as Python SRP
+    participant CDB as ChromaDB<br/>(Vector Search)
+    participant RM as Reranker Model
     participant DB as MongoDB
-    
+
+    title Search & Ranking Flow with Reranker
+
+    %% --- Autosuggest Flow ---
+    Note over U, ES: Initial Query & Autosuggest
     U->>UI: Types "washin machin"
-    
-    %% Autosuggest Flow
-    UI->>API: /autosuggest?q=washin machin
-    API->>ES: Multi-search on 'products' & 'search_terms'
-    ES-->>API: Returns "Washing Machines", "top load...", etc.
+    UI->>API: GET /autosuggest?q=washin machin
+    API->>ES: Multi-search request<br/>on 'products' & 'search_terms'
+    ES-->>API: Returns ranked suggestions<br/>["washing machine", "top load..."]
     API-->>UI: Displays ranked suggestions
     UI-->>U: Shows "top load washing machine"
 
-    %% Full Search Flow
-    U->>UI: Clicks "top load washing machine" suggestion
-    UI->>API: /search?q=top load washing machine
-    API->>DB: Finds term is linked to "Washing Machines" subcategory
-    API->>SRP: POST /api/search { query: "Washing Machines" }
-    SRP->>ChromaDB: Vector search for "Washing Machines"
-    SRP-->>API: Returns ranked list of product IDs
-    API->>DB: Fetches full details for ranked IDs
+    %% --- Full Search & Reranking Flow ---
+    Note over U, U: User selects a suggestion
+    U->>UI: Clicks "top load washing machine"
+
+    Note over UI, DB: Full Search Request & Category Lookup
+    UI->>API: GET /search?q=top load washing machine
+    API->>DB: Find category for term<br/>"top load washing machine"
+    DB-->>API: Returns linked subcategory:<br/>"Washing Machines"
+
+    Note over API, RM: Semantic Search, Reranking, and Final Retrieval
+    API->>SRP: POST /api/search<br/>{ query: "top load...",<br/>category: "Washing Machines" }
+    
+    SRP->>CDB: Vector search with query<br/>and category filter
+    CDB-->>SRP: Returns initial candidate IDs<br/>(e.g., top 100)
+
+    SRP->>RM: Rerank(query, candidate_IDs)
+    RM-->>SRP: Returns final, re-ordered<br/>product IDs
+
+    SRP-->>API: Returns highly-ranked list<br/>of product IDs
+    
+    API->>DB: Fetches full product details<br/>for ranked IDs
+    DB-->>API: Returns full product objects
+
     API-->>UI: Returns final, sorted product list
-    UI-->>U: Displays highly relevant washing machines
+    UI-->>U: Displays highly relevant<br/>washing machines
 ```
 
 -----
@@ -113,7 +172,7 @@ const scoringWeights = {
 };
 ```
 
-### 2. Semantic Search Pipeline (Python SRP)
+### 2. Search Results Page Pipeline (Python SRP)
 
 Our Search Results Page (SRP) uses a rigorously validated, multi-stage pipeline to ensure highly relevant and diverse results:
 
@@ -227,7 +286,7 @@ This step is **critical** and populates your databases. Run these commands from 
 # 2. Populate MongoDB with category & search term data
 (cd server && node importCategories.js)
 ```
-After doing this, **restart the Node.js server (Terminal 1)** for it to create the Elasticsearch indices with the new data.
+After doing this, **restart the Node.js server (Terminal 1)** for it to create the Elasticsearch indices with the new data. The server will be hosted on  `http://localhost:8001`.
 
 **You are all set!** Open `http://localhost:8000` and experience the search.
 
