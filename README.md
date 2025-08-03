@@ -159,29 +159,56 @@ cp server/.env.example server/.env
 
 ### Step 2: Run the Services
 
-Open four terminals, one for each step.
+Open two terminals, for this step.
 
-**➡️ Terminal 1: Start the Backend Server (Node.js)**
-This server also handles Elasticsearch and Redis connections.
+**➡️ Terminal 1: Start Elasticsearch via Docker**
 ```bash
-cd server
-npm install
-npm start
+docker run -p 9200:9200 -p 9300:9300 \
+  -e "discovery.type=single-node" \
+  -e "xpack.security.enabled=false" \
+  docker.elastic.co/elasticsearch/elasticsearch:8.14.1
 ```
-*This server runs on `http://localhost:8000`.*
+*Wait for this to show a success message before proceeding.
 
-**➡️ Terminal 2: Start the SRP Microservice (Python)**
+**➡️ Terminal 2: Start Redis via Docker**
+
 ```bash
+docker run -p 6379:6379 redis
+```
+
+*This will start and run in the foreground.
+---
+
+### Step 3: Run the Application Services
+
+Open three more terminals for your application code.
+
+**➡️ Terminal 3: Start the SRP Microservice (Python)**
+```bash
+From the root directory, open terminal and run these commands (Make sure your docker engine is running before it):
+
 cd SRP
-# It's recommended to use a virtual environment
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-uvicorn app.main:app --host 0.0.0.0 --port 8001
-```
-*This service runs on `http://localhost:8001`.*
+docker-compose up --build
 
-**➡️ Terminal 3: Start the Frontend (React)**
+```
+
+*When the terminal show output like
+```bash
+Attaching to flipkart_srp_api                    
+flipkart_srp_api  | INFO:     Started server process [8]                                                        
+flipkart_srp_api  | INFO:     Waiting for application startup.
+flipkart_srp_api  | INFO:     Application startup complete.
+```
+
+*then run the below commands
+```bash
+
+cd SRP
+docker-compose exec srp_api python scripts/bulk_indexer.py
+```
+
+
+**➡️ Terminal 4: Start the Frontend (React)**
 ```bash
 cd client
 npm install
@@ -189,7 +216,7 @@ npm start
 ```
 *Your application will be available at `http://localhost:3000`.*
 
-**➡️ Terminal 4: Index Your Data (One-Time Setup)**
+**➡️ Terminal 5: Index Your Data (One-Time Setup)**
 This step is **critical** and populates your databases. Run these commands from the project root.
 ```bash
 # 1. Populate MongoDB with product data
