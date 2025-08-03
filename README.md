@@ -106,9 +106,9 @@ For instant suggestions, we use a custom scoring model in Node.js on top of Elas
 ```javascript
 // Scoring Priorities for Autosuggest (Higher = Better Rank)
 const scoringWeights = {
-  exactMatch: 1000, // Recently clicked items from Redis
-  prefixMatch: 800,       // Query matches a full term
-  personalization : 500,      // Term starts with the query
+  exactMatch: 1000,  // Query matches a full term 
+  prefixMatch: 800,       // Term starts with the query
+  personalization: 500,      // Frequently clicked items from Redis for the user
   ProductMatch: 250,   // Term contains the query
 };
 ```
