@@ -45,6 +45,6 @@ FALLBACK_CANDIDATE_COUNT=200
 BATCH_SIZE = 512
 
 # --- API Configuration ---
-API_BASE_URL = os.getenv("NODE_API_URL", "http://localhost:8000")
+API_BASE_URL = "http://localhost:8000"
 
 

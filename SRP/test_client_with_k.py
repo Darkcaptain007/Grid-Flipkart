@@ -4,14 +4,14 @@ import sys
 import time
 import textwrap
 import os
-from dotenv import load_dotenv
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parent))
+from app.core.config import PRODUCT_DATA_PATH, CLIENT_DISPLAY_COUNT
 
 # --- Configuration ---
-API_URL = os.getenv("SRP_API_URL", "http://localhost:8001/api/search")
-load_dotenv()
-PRODUCT_DATA_FILE = os.getenv("PRODUCT_DATA_FILE")
-DATA_FILE_PATH = f"data/{PRODUCT_DATA_FILE}"
-DEFAULT_K = int(os.getenv("CLIENT_DISPLAY_COUNT", 5))
+API_URL = "http://localhost:8000/api/search"
+DATA_FILE_PATH = PRODUCT_DATA_PATH
+DEFAULT_K = CLIENT_DISPLAY_COUNT
 
 def load_and_index_data(file_path):
     """
