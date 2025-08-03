@@ -22,7 +22,7 @@ export const personalizedSearch = async (req, res) => {
     try {
         // 1. Call the SRP service to get ranked product IDs
         console.log(`[Node Server] Calling SRP service for query: "${searchQuery}"`);
-        const srpResponse = await axios.post('http://localhost:8001/api/search', {
+        const srpResponse = await axios.post(`${process.env.SRP_API_URL}/api/search`, {
             query: searchQuery
         });
 

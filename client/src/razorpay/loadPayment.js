@@ -1,5 +1,5 @@
 import axios from 'axios';
-const url = 'http://localhost:8000';
+const url = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
 export const loadRazorpay=(price)=> {
     const orderAmount=price+"00";

@@ -32,7 +32,7 @@ The content is organized as follows:
 <notes>
 - Some files may have been excluded based on .gitignore rules and Repomix's configuration
 - Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
-- Files matching these patterns are excluded: **/categories_subcategories_list.csv, **/cleaned_combined.csv, **/flipkart_electronics_cleaned.csv, **/gemini_generated_queries_live.csv, **/subcategories_search_terms_multiline.csv, **/subcategories_with_search_strings.csv, **/product_data.csv, **/combined_unique.csv, **/search_strings_subcategories.csv
+- Files matching these patterns are excluded: **/*.csv
 - Files matching patterns in .gitignore are excluded
 - Files matching default ignore patterns are excluded
 - Files are sorted by Git change count (files with more changes are at the bottom)
@@ -558,229 +558,6 @@ const TotalView = ({ cartItems }) => {
 export default TotalView;
 </file>
 
-<file path="client/src/Components/Header/CustomButtons.jsx">
-import { useState, useContext } from 'react';
-import { makeStyles, Box, Typography, Badge, Button } from '@material-ui/core';
-import { Link } from 'react-router-dom';
-import { ShoppingCart } from '@material-ui/icons';
-import LoginDialog from '../Login/LoginDialog';
-import { LoginContext } from '../../context/ContextProvider';
-import { useSelector } from 'react-redux';
-import Profile from './Profile';
-
-const useStyle = makeStyles(theme => ({
-  wrapper: {
-    margin: '0 5% 0 auto',
-    display: 'flex',
-    alignItems: 'center',
-    '& > *': {
-      marginRight: 32,
-      textDecoration: 'none',
-      color: '#FFFFFF',
-      fontSize: 12,
-      alignItems: 'center',
-      display: 'flex',
-      lineHeight: '20px',
-      [theme.breakpoints.down('sm')]: {
-        color: '#ffffffff',
-        alignItems: 'center',
-        display: 'flex',
-        flexDirection: 'column',
-        marginTop: 10
-      }
-    },
-    [theme.breakpoints.down('sm')]: {
-      display: 'block'
-    }
-  },
-  login: {
-    color: '#2874f0',
-    background: '#FFFFFF',
-    textTransform: 'none',
-    fontWeight: 600,
-    borderRadius: 2,
-    padding: '5px 40px',
-    height: 32,
-    boxShadow: 'none',
-    [theme.breakpoints.down('sm')]: {
-      background: '#2874f0ff',
-      color: '#FFFFFF'
-    }
-  }
-}));
-
-const CustomButtons = () => {
-  const classes = useStyle();
-  const [open, setOpen] = useState(false);
-  const { account, logout, setAccount } = useContext(LoginContext);
-  const cartDetails = useSelector(state => state.cart);
-  const { cartItems } = cartDetails;
-
-  const openDialog = () => setOpen(true);
-
-  return (
-    <Box className={classes.wrapper}>
-      {/* User/Profile/Login section */}
-      <Box display="flex" alignItems="center">
-        {account
-          ? <Profile account={account} setAccount={() => {}} />
-          : <Button onClick={openDialog} className={classes.login}>Login</Button>
-        }
-      </Box>
-
-      {/* "More" Section */}
-      <Box display="flex" alignItems="center">
-        <Typography>More</Typography>
-      </Box>
-
-      {/* Cart Section */}
-      <Box display="flex" alignItems="center">
-        <Link to="/cart" style={{
-          display: 'flex',
-          alignItems: 'center',
-          textDecoration: 'none',
-          color: '#FFF'
-        }}>
-          <Badge badgeContent={cartItems?.length} color="secondary">
-            <ShoppingCart />
-          </Badge>
-          <Typography style={{ marginLeft: 10 }}>Cart</Typography>
-        </Link>
-      </Box>
-
-      {/* Logout */}
-      {account && (
-        <Box display="flex" alignItems="center">
-          <Button onClick={logout} style={{ color: '#fff', fontSize: 12, fontWeight: 500 }}>
-            Logout
-          </Button>
-        </Box>
-      )}
-
-      {/* Login Dialog */}
-      <LoginDialog open={open} setOpen={setOpen} setAccount={setAccount} />
-    </Box>
-  );
-};
-
-export default CustomButtons;
-</file>
-
-<file path="client/src/Components/Header/Header.jsx">
-import { AppBar, Toolbar, makeStyles, Box, Typography, withStyles, IconButton, Drawer, List} from '@material-ui/core';
-import { Link } from 'react-router-dom';
-import CustomButtons from './CustomButtons';
-import Search from './Search';
-import { Menu } from '@material-ui/icons';
-import { useState } from 'react';
-
-const useStyle = makeStyles(theme => ({
-    header: {
-        background: '#2874f0',
-        height: 55
-    },
-    component: {
-        marginLeft: '12%',
-        lineHeight: 0,
-        color: '#FFFFFF',
-        textDecoration: 'none'
-    },
-    logo: {
-        width: 75
-    },
-    container: {
-        display: 'flex',
-    },
-    subHeading: {
-        fontSize: 10,
-        fontStyle: 'italic'
-    },
-    subURL: {
-        width: 10,
-        height: 10,
-        marginLeft: 4
-    },
-    list: {
-        width: 250
-    },
-    menuButton: {
-        display: 'none',
-        [theme.breakpoints.down('sm')]: {
-            display: 'block'
-        }
-    },
-    customButtons: {
-        margin: '0 5% 0 auto', 
-        [theme.breakpoints.down('sm')]: {
-            display: 'none'
-        } 
-    }
-}));
-
-const ToolBar = withStyles({
-    root: {
-      minHeight: 55
-    },
-})(Toolbar);
-
-const Header = () => {
-    const classes = useStyle();
-    const logoURL = 'https://static-assets-web.flixcart.com/www/linchpin/fk-cp-zion/img/flipkart-plus_8d85f4.png';
-    const subURL = 'https://static-assets-web.flixcart.com/www/linchpin/fk-cp-zion/img/plus_aef861.png';
-
-    const [open, setOpen] = useState(false);
-
-    const handleClose = () => {
-        setOpen(false);
-    }
-
-    const handleOpen = () => {
-        setOpen(true);
-    }
-
-    const list = () => (
-        <Box className={classes.list} onClick={handleClose}>
-            <List>
-                <listItem button>
-                    <CustomButtons />
-                </listItem>
-            </List>
-        </Box>
-    );
-
-
-    return (
-        <AppBar position="fixed" className={classes.header}>
-            <ToolBar>
-                <IconButton
-                    color="inherit"
-                    className={classes.menuButton}
-                    onClick={handleOpen}
-                >
-                    <Menu />
-                </IconButton>
-
-                <Drawer open={open} onClose={handleClose}>
-                    {list()}
-                </Drawer>
-
-                <Link to='/' className={classes.component}>
-                    <img src={logoURL} className={classes.logo} alt="" />
-                    <Box component="span" className={classes.container}>
-                        <Typography className = {classes.subHeading}>Explore <Box component="span" style={{color:'#FFE500'}}>Plus</Box></Typography>
-                        <img src={subURL} className={classes.subURL} alt="" />
-                    </Box>
-                </Link>
-                <Search />
-                <span className={classes.customButtons}><CustomButtons /></span>
-            </ToolBar>
-        </AppBar>
-    )
-}
-
-export default Header;
-</file>
-
 <file path="client/src/Components/Home/Banner.jsx">
 import Carousel from 'react-material-ui-carousel'
 import { makeStyles } from '@material-ui/core'
@@ -1013,53 +790,6 @@ const MidSlide = ({ products }) => {
 }
 
 export default MidSlide;
-</file>
-
-<file path="client/src/Components/Home/NarBar.jsx">
-import { Box, makeStyles, Typography } from '@material-ui/core';
-import { navData } from '../../constant/data';
-
-const useStyle = makeStyles(theme => ({
-    component: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        margin: '55px 130px 0 130px',
-        overflowX: 'overlay',
-        [theme.breakpoints.down('md')]: {
-            margin: 0
-        }
-    },
-    container: {
-        padding: '12px 8px',
-        textAlign: 'center'
-    },
-    image: {
-        width: 64
-    },
-    text: {
-        fontSize: 14,
-        fontWeight: 600,
-        fontFamily: 'inherit'
-    }
-}));
-
-const NavBar = () => {
-    const classes = useStyle();
-    return (
-        <Box className={classes.component}>
-            {
-                navData.map(temp => (
-                    <Box className={classes.container}>
-                        <img src={temp.url} className={classes.image} alt="" />
-                        <Typography className={classes.text}>{temp.text}</Typography>
-                    </Box>
-                ))
-            }
-        </Box>
-    )
-}
-
-export default NavBar;
 </file>
 
 <file path="client/src/Components/Home/Slide.jsx">
@@ -1663,83 +1393,6 @@ export { default as Home } from './Home';
 export { default as Product } from './Product';
 // export { default as Header} from './Header';
 export { default as NotFound } from './NotFound';
-</file>
-
-<file path="client/src/Components/Home.jsx">
-import { Box, makeStyles } from '@material-ui/core';
-import { useHistory } from 'react-router-dom';
-import NavBar from './Home/NarBar';
-import Banner from './Home/Banner';
-import MidSlide from './Home/MidSlide';
-import MidSection from './Home/MidSection';
-import Slide from './Home/Slide';
-import React, { useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux'; // hooks
-import { getProducts as listProducts } from '../redux/actions/productActions';
-import CategoryMenu from "./Home/CategoryMenu";
-
-const useStyle = makeStyles({
-    component: {
-        padding: 10,
-        background: '#F2F2F2'
-    }
-});
-
-const Home = () => {
-    const classes = useStyle();
-
-    const getProducts = useSelector(state => state.getProducts);
-    const { products } = getProducts;
-
-    const dispatch = useDispatch();
-    const history = useHistory();
-
-    const handleCategoryClick = (cat) => {
-        history.push(`/search?q=${encodeURIComponent(cat)}`);
-    };
-
-    useEffect(() => {
-        dispatch(listProducts())
-    }, [dispatch])
-
-    return (
-        <> 
-            <NavBar />
-            <CategoryMenu onCategoryClick={handleCategoryClick} />
-            <Box className={classes.component}>
-                <Banner />
-                <MidSlide products={products} />
-                <MidSection />
-                <Slide
-                    data={products} 
-                    title='Discounts for You'
-                    timer={false} 
-                    multi={true} 
-                />
-                <Slide
-                    data={products} 
-                    title='Suggested Items'
-                    timer={false} 
-                    multi={true} 
-                />
-                <Slide
-                    data={products} 
-                    title='Top Selection'
-                    timer={false} 
-                    multi={true} 
-                />
-                <Slide
-                    data={products} 
-                    title='Recommended Items'
-                    timer={false} 
-                    multi={true} 
-                />
-            </Box>
-        </>
-    )
-}
-
-export default Home;
 </file>
 
 <file path="client/src/Components/NotFound.jsx">
@@ -3088,31 +2741,6 @@ export const userLogIn = async (req, res) => {
 };
 </file>
 
-<file path="server/database/db.js">
-import mongoose from 'mongoose';
-import dotenv from 'dotenv';
-
-// This ensures your .env file is read
-dotenv.config();
-
-const Connection = async () => {
-    const password = process.env.DB_PASSWORD;
-    // This is the correct connection string you got from the Atlas website
-    const URL = `mongodb+srv://yashanand37:${password}@cluster0.mwn1mjt.mongodb.net/flipkart?retryWrites=true&w=majority&appName=Cluster0`;
-
-    try {
-        // Connect without the old, unnecessary options
-        await mongoose.connect(URL);
-        
-        console.log('Database Connected Successfully');
-    } catch(error) {
-        console.log('Error: ', error.message);
-    }
-};
-
-export default Connection;
-</file>
-
 <file path="server/database/redis.js">
 import { createClient } from 'redis';
 
@@ -3784,95 +3412,6 @@ if __name__ == "__main__":
     main()
 </file>
 
-<file path="SRP/scripts/Example.py">
-import pandas as pd
-import sys
-from pathlib import Path
-import subprocess # To call our other script
-
-# Add project root to path to import utils
-sys.path.append(str(Path(__file__).resolve().parent.parent))
-
-from scripts.utils import append_product_to_csv
-from app.core.config import PRODUCT_DATA_PATH
-
-def main():
-    """
-    Demonstrates the full workflow of adding a new product.
-    1. Defines a new product.
-    2. Appends it to the master CSV.
-    3. Calls the script to index it via the API.
-    """
-    print("--- Starting New Product Addition Workflow ---")
-
-    # --- 1. Define the New Product Data ---
-    # Let's add a new, high-end laptop. The PID should be unique.
-    new_laptop = {
-        'product_url': 'https://www.flipkart.com/new-gaming-laptop-pro/p/itm_fake_pid_laptop',
-        'product_name': 'Aura Gaming Laptop Pro X1 (2025 Edition)',
-        'product_category_tree': 'Home > Computers > Laptops',
-        'pid': 'LAPTOPPROX1GAMING', # Our unique Product ID
-        'retail_price': '₹1,50,000',
-        'discounted_price': '₹1,35,000',
-        'image': 'https://example.com/laptop.jpg',
-        'description': 'Experience next-generation gaming with the Aura Pro X1. Features a powerful new CPU, top-tier graphics card, and a stunning 16-inch QHD display with a 240Hz refresh rate. Perfect for competitive gamers and content creators.',
-        'product_rating': '4.8',
-        'brand': 'Aura',
-        'product_specifications': '[{\'key\': \'Model Name\', \'value\': \'Gaming Laptop Pro X1\'}]',
-        'category': 'Computers',
-        'subcategory': 'Laptops'
-    }
-    print(f"\nStep 1: Defined new product with PID: '{new_laptop['pid']}'")
-
-    # --- 2. Append the New Product to the Master CSV ---
-    print(f"\nStep 2: Appending new product to '{PRODUCT_DATA_PATH.name}'...")
-    try:
-        append_product_to_csv(new_laptop)
-    except Exception as e:
-        print(f"  ERROR: Failed to append to CSV. Reason: {e}")
-        return
-
-    # --- 3. Call the `add_new_product.py` Script to Index via API ---
-    print("\nStep 3: Calling the API script to push the new product to the search index...")
-    
-    # We use subprocess to call our other script, passing the new PID as an argument.
-    # This simulates running it from the command line.
-    script_path = "scripts/add_new_product.py"
-    pid_to_add = new_laptop['pid']
-    
-    try:
-        # We run 'python' and then the script path and the argument.
-        # `check=True` will raise an error if the script fails.
-        # `capture_output=True` and `text=True` let us see the script's output.
-        result = subprocess.run(
-            [sys.executable, script_path, pid_to_add],
-            check=True,
-            capture_output=True,
-            text=True
-        )
-        print("  --- Output from add_new_product.py ---")
-        print(result.stdout)
-        if result.stderr:
-            print("  --- Errors from add_new_product.py ---")
-            print(result.stderr)
-        
-        print("\n--- Workflow Complete! ---")
-        print(f"Product '{pid_to_add}' has been added to the CSV and sent to the search index.")
-        print("You can now test searching for 'Aura Gaming Laptop' using the client script.")
-
-    except FileNotFoundError:
-        print(f"  ERROR: Could not find the script at '{script_path}'. Make sure you are in the project root.")
-    except subprocess.CalledProcessError as e:
-        print(f"  ERROR: The '{script_path}' script failed to execute.")
-        print("  --- Script Output (stdout) ---")
-        print(e.stdout)
-        print("  --- Script Errors (stderr) ---")
-        print(e.stderr)
-
-if __name__ == "__main__":
-    main()
-</file>
-
 <file path="SRP/scripts/utils.py">
 import pandas as pd
 import os
@@ -3925,165 +3464,6 @@ db_storage/
 uvicorn app.main:app --reload
 python scripts/bulk_indexer.py
 python test_client_with_k.py
-</file>
-
-<file path="SRP/Dockerfile">
-# Start with a slim, official Python 3.12 base image
-FROM python:3.12-slim
-
-# Set the working directory inside the container
-WORKDIR /app
-
-# Set environment variables for Python
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
-
-# Install system dependencies that might be needed for some Python packages
-RUN apt-get update && apt-get install -y --no-install-recommends gcc
-
-# Copy the requirements file first to leverage Docker layer caching
-COPY requirements.txt .
-
-# Install Python dependencies
-RUN pip install --no-cache-dir --upgrade pip
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy the rest of your application code into the container
-COPY . .
-
-# Expose the port the app runs on
-EXPOSE 8000
-
-# The command to run your application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
-</file>
-
-<file path="SRP/test_client_with_k.py">
-import requests
-import pandas as pd
-import sys
-import time
-import textwrap
-import os
-from dotenv import load_dotenv
-
-# --- Configuration ---
-API_URL = "http://127.0.0.1:8000/api/search"
-load_dotenv()
-PRODUCT_DATA_FILE = os.getenv("PRODUCT_DATA_FILE")
-DATA_FILE_PATH = f"data/{PRODUCT_DATA_FILE}"
-DEFAULT_K = int(os.getenv("CLIENT_DISPLAY_COUNT", 5))
-
-def load_and_index_data(file_path):
-    """
-    Loads the product data from a CSV and sets 'pid' as the index for fast lookups.
-    Returns the indexed DataFrame or None if the file is not found.
-    """
-    try:
-        print(f"Loading and indexing data from '{file_path}'...")
-        df = pd.read_csv(file_path)
-        # Use 'pid' as the unique identifier and set it as the index. Clean the data.
-        df.dropna(subset=['pid', 'product_name', 'description'], inplace=True)
-        df.drop_duplicates(subset=['pid'], keep='first', inplace=True)
-
-        df_indexed = df.set_index('pid')
-        print("Data loaded and indexed successfully.")
-        return df_indexed
-    except FileNotFoundError:
-        print(f"ERROR: Data file not found at '{file_path}'.")
-        return None
-    except KeyError:
-        print(f"ERROR: The CSV file at '{file_path}' must contain a 'pid' column.")
-        return None
-
-def call_search_api(query):
-    """
-    Sends a search query to the API and returns the list of ranked PIDs.
-    """
-    print(f"\nSending query to API: '{query}'")
-    try:
-        start_time = time.time()
-        response = requests.post(API_URL, json={"query": query})
-        response.raise_for_status()  # Raise an exception for bad status codes (4xx or 5xx)
-        end_time = time.time()
-        
-        print(f"API response received in {end_time - start_time:.2f} seconds.")
-        return response.json().get('ranked_ids', [])
-    except requests.exceptions.RequestException as e:
-        print("\n--- API REQUEST FAILED ---")
-        print(f"Could not connect to the search API at {API_URL}.")
-        print("Please ensure the uvicorn server is running: `uvicorn app.main:app --reload`")
-        print(f"Error details: {e}")
-        return None
-
-def display_results(indexed_df, pids, k):
-    """
-    Fetches product details from the indexed DataFrame and displays the top K results.
-    """
-    if not pids:
-        print("\n--- No results found for your query. ---")
-        return
-
-    top_pids = pids[:k]
-    
-    # Use .loc for super-fast lookups from the indexed DataFrame
-    # We use reindex to handle cases where a PID might not be in the df, filling with NaN
-    results_df = indexed_df.reindex(top_pids)
-    
-    print("\n" + "="*50)
-    print(f"  Top {min(k, len(results_df))} Search Results")
-    print("="*50 + "\n")
-
-    for i, (pid, row) in enumerate(results_df.iterrows()):
-        if pd.isna(row['product_name']):
-            print(f"{i+1}. Product with PID '{pid}' not found in local data file.")
-            continue
-
-        # Use textwrap for clean description formatting
-        description = textwrap.shorten(str(row.get('description', 'No description available.')), width=100, placeholder="...")
-
-        print(f"{i+1}. {row['product_name']}")
-        print(f"   - PID:    {pid}")
-        print(f"   - Brand:  {row.get('brand', 'N/A')}")
-        print(f"   - Price:  ₹{row.get('discounted_price', 'N/A')}")
-        print(f"   - Rating: {row.get('product_rating', 'N/A')}")
-        print(f"   - Desc:   {description}\n")
-
-def main():
-    """
-    Main function to drive the client application.
-    """
-    product_df_indexed = load_and_index_data(DATA_FILE_PATH)
-    if product_df_indexed is None:
-        sys.exit(1)
-
-    while True:
-        # --- Get user input ---
-        query = input("Enter your search query (or 'quit' to exit): ")
-        if query.lower() == 'quit':
-            break
-        if not query:
-            print("Please enter a valid query.")
-            continue
-
-        try:
-            k_str = input(f"How many top results to display? (e.g., {DEFAULT_K}): ")
-            if not k_str:  # If user just presses Enter
-                k = DEFAULT_K
-            else:
-                k = int(k_str)
-            if k <= 0: raise ValueError
-        except (ValueError, TypeError):
-            print(f"Invalid number. Defaulting to {DEFAULT_K} results.")
-            k = DEFAULT_K
-
-        # --- Call API and display results ---
-        ranked_pids = call_search_api(query)
-        if ranked_pids is not None:
-            display_results(product_df_indexed, ranked_pids, k)
-
-if __name__ == "__main__":
-    main()
 </file>
 
 <file path="SRP/test_subcategory_intent.py">
@@ -4206,61 +3586,6 @@ if __name__ == "__main__":
     asyncio.run(main())
 </file>
 
-<file path=".gitignore">
-# Byte-compiled / optimized / C extensions
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-*.so
-
-# Distribution / packaging
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-
-# Virtual Environments
-venv/
-env/
-.venv/
-*/venv/
-*/env/
-*/.venv/
-
-# IDE / Editor specific files
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# Environment variables
-.env
-.env.*
-
-# Operating System Files
-.DS_Store
-Thumbs.db
-
-# Test artifacts
-.pytest_cache/
-.coverage
-</file>
-
 <file path="package.json">
 {
   "name": "flipkart",
@@ -4284,87 +3609,389 @@ Thumbs.db
 }
 </file>
 
-<file path="client/src/Components/Header/Profile.jsx">
-import { useState } from 'react';
-import { Box, Typography, Menu, MenuItem, makeStyles } from '@material-ui/core';
-import { PowerSettingsNew, AccountCircle, ExpandMore } from '@material-ui/icons';
+<file path="client/src/Components/Header/CustomButtons.jsx">
+import { useState, useContext } from 'react';
+import { makeStyles, Box, Typography, Button } from '@material-ui/core';
+import { Link } from 'react-router-dom';
+import { ShoppingCart } from '@material-ui/icons';
+import LoginDialog from '../Login/LoginDialog';
+import { LoginContext } from '../../context/ContextProvider';
+import { useSelector } from 'react-redux';
+import Profile from './Profile';
 
-// --- ENHANCEMENT: New styles to match Flipkart's UI ---
 const useStyle = makeStyles(theme => ({
-    container: {
+    wrapper: {
         display: 'flex',
         alignItems: 'center',
+        gap: '40px',
+        margin: '0 5% 0 auto', // Pushes the whole group to the right
+    },
+    linkText: {
+        fontSize: 16,
+        fontWeight: 500,
         cursor: 'pointer',
     },
-    menuComponent: {
-        marginTop: 40,
+    homePageText: {
+        color: '#000000',
     },
-    username: {
-        marginLeft: 8,
-        marginRight: 4,
+    defaultText: {
+        color: '#FFFFFF',
+    },
+    login: {
+        color: '#2874f0',
+        background: '#FFFFFF',
+        textTransform: 'none',
         fontWeight: 600,
-        fontSize: 14,
-        color: '#fff', // Ensure text is white
-        [theme.breakpoints.down('sm')]: {
-          color: '#2874f0', // Change color for mobile drawer view if needed
-        }
+        borderRadius: 2,
+        padding: '5px 40px',
+        height: 32,
+        boxShadow: '0 2px 4px 0 rgb(0 0 0 / 20%)',
     },
-    icon: {
-        color: '#fff',
-        [theme.breakpoints.down('sm')]: {
-          color: '#2874f0',
-        }
-    },
-    logout: {
-        fontSize: 14,
-        marginLeft: 20
+    cartLink: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        textDecoration: 'none'
     }
 }));
 
-const Profile = ({ account, setAccount }) => {
-    const [open, setOpen] = useState(false);
+const CustomButtons = ({ isHomePage }) => {
     const classes = useStyle();
+    const [open, setOpen] = useState(false);
+    const { account, logout, setAccount } = useContext(LoginContext);
+    const { cartItems } = useSelector(state => state.cart);
 
-    const handleClick = (event) => {
-        setOpen(event.currentTarget);
-    };
+    const openDialog = () => setOpen(true);
+    const textColorClass = isHomePage ? classes.homePageText : classes.defaultText;
 
-    const handleClose = () => {
-        setOpen(false);
-    };
-
-    const logout = () => {
-        setAccount('');
-        // Also clear from local storage for consistency
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-    };
-    
     return (
-        <>
-            {/* --- ENHANCEMENT: Replaced simple text with Icon -> Name -> Arrow structure --- */}
-            <Box onClick={handleClick} className={classes.container}>
-                <AccountCircle className={classes.icon} />
-                <Typography className={classes.username}>{account}</Typography>
-                <ExpandMore className={classes.icon} fontSize="small" />
-            </Box>
+        <Box className={classes.wrapper}>
+            {account ? (
+                <Profile account={account} setAccount={setAccount} logout={logout} isHomePage={isHomePage} />
+            ) : (
+                <Button variant="contained" onClick={openDialog} className={classes.login}>
+                    Login
+                </Button>
+            )}
 
-            <Menu
-                anchorEl={open}
-                open={Boolean(open)}
-                onClose={handleClose}
-                className={classes.menuComponent}
-            >
-                <MenuItem onClick={() => { handleClose(); logout();}}>
-                    <PowerSettingsNew fontSize='small' color='primary'/> 
-                    <Typography className={classes.logout}>Logout</Typography>
-                </MenuItem>
-            </Menu>
-        </>
-    )    
+            <Typography className={`${classes.linkText} ${textColorClass}`}>
+                Become a Seller
+            </Typography>
+            
+            <Typography className={`${classes.linkText} ${textColorClass}`}>
+                More
+            </Typography>
+
+            <Link to="/cart" className={`${classes.cartLink} ${textColorClass}`}>
+                <ShoppingCart />
+                <Typography>Cart</Typography>
+            </Link>
+            
+            <LoginDialog open={open} setOpen={setOpen} setAccount={setAccount} />
+        </Box>
+    );
+};
+
+export default CustomButtons;
+</file>
+
+<file path="client/src/Components/Header/Header.jsx">
+import { AppBar, Toolbar, makeStyles, Box, Typography, withStyles, IconButton, Drawer, List } from '@material-ui/core';
+import { Link, useLocation } from 'react-router-dom';
+import CustomButtons from './CustomButtons';
+import Search from './Search';
+import { Menu } from '@material-ui/icons';
+import { useState } from 'react';
+
+const useStyle = makeStyles(theme => ({
+    header: {
+        background: '#2874f0',
+        height: 56, // Adjusted height
+        boxShadow: 'none',
+    },
+    headerHome: {
+        background: '#FFFFFF',
+        color: '#000000',
+        borderBottom: '1px solid #e0e0e0',
+    },
+    component: {
+        marginLeft: '8%',
+        lineHeight: 0,
+        textDecoration: 'none',
+        color: 'inherit',
+    },
+    logoText: {
+        fontSize: '20px',
+        fontWeight: 'bold',
+        fontStyle: 'italic',
+        color: '#FFFFFF',
+    },
+    logoTextHome: {
+        color: '#2874f0',
+    },
+    container: {
+        display: 'flex',
+    },
+    subHeading: {
+        fontSize: 10,
+        fontStyle: 'italic',
+        color: '#FFFFFF',
+    },
+    subHeadingHome: {
+        color: '#878787',
+    },
+    subURL: {
+        width: 10,
+        height: 10,
+        marginLeft: 4
+    },
+    // --- UI ENHANCEMENT: Toolbar is now the main layout container ---
+    toolbar: {
+        display: 'flex',
+        alignItems: 'center',
+        minHeight: 56
+    },
+    // --- UI ENHANCEMENT: New style for the search container ---
+    searchContainer: {
+        flexGrow: 1, // Allows this container to take up all available horizontal space
+        display: 'flex',
+        justifyContent: 'center', // Centers the Search bar within this container
+        padding: '0 20px', // Adds some breathing room around the search bar
+    },
+    list: {
+        width: 250
+    },
+    menuButton: {
+        display: 'none',
+        [theme.breakpoints.down('sm')]: {
+            display: 'block'
+        }
+    },
+}));
+
+// Using withStyles is fine, but for consistency, we'll use the toolbar class from makeStyles.
+// const ToolBar = withStyles({ root: { minHeight: 56 } })(Toolbar);
+
+const Header = () => {
+    const classes = useStyle();
+    const location = useLocation();
+    const isHomePage = location.pathname === '/';
+    
+    const subURL = 'https://static-assets-web.flixcart.com/www/linchpin/fk-cp-zion/img/plus_aef861.png';
+
+    const [open, setOpen] = useState(false);
+    const handleClose = () => { setOpen(false); }
+    const handleOpen = () => { setOpen(true); }
+
+    const list = () => (
+        <Box className={classes.list} onClick={handleClose}>
+            <List><listItem button><CustomButtons isHomePage={isHomePage} /></listItem></List>
+        </Box>
+    );
+
+    return (
+        <AppBar position="fixed" className={`${classes.header} ${isHomePage ? classes.headerHome : ''}`}>
+            {/* --- UI ENHANCEMENT: Use the new styled Toolbar --- */}
+            <Toolbar className={classes.toolbar}>
+                <IconButton color="inherit" className={classes.menuButton} onClick={handleOpen}>
+                    <Menu />
+                </IconButton>
+
+                <Drawer open={open} onClose={handleClose}>{list()}</Drawer>
+
+                <Link to='/' className={classes.component}>
+                    <Typography className={`${classes.logoText} ${isHomePage ? classes.logoTextHome : ''}`}>
+                        Flipkart
+                    </Typography>
+                    <Box component="span" className={classes.container}>
+                        <Typography className={`${classes.subHeading} ${isHomePage ? classes.subHeadingHome : ''}`}>
+                            Explore <Box component="span" style={{color:'#FFE500'}}>Plus</Box>
+                        </Typography>
+                        <img src={subURL} className={classes.subURL} alt="" />
+                    </Box>
+                </Link>
+                
+                {/* --- UI ENHANCEMENT: Search bar is now wrapped for centering --- */}
+                <Box className={classes.searchContainer}>
+                    <Search />
+                </Box>
+                
+                {/* CustomButtons is now a direct child, pushed to the right by the search container */}
+                <CustomButtons isHomePage={isHomePage} />
+            </Toolbar>
+        </AppBar>
+    )
 }
 
-export default Profile;
+export default Header;
+</file>
+
+<file path="client/src/Components/Home/NarBar.jsx">
+import { Box, makeStyles, Typography } from '@material-ui/core';
+import { navData } from '../../constant/data';
+
+// --- UI ENHANCEMENT: Styles completely overhauled to match Flipkart's UI ---
+const useStyle = makeStyles(theme => ({
+    component: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        margin: '0 64px', // Add horizontal margin
+        overflowX: 'auto', // Allow scrolling on small screens
+        background: '#fff', // White background
+        padding: '12px 8px',
+        [theme.breakpoints.down('md')]: {
+            margin: 0
+        }
+    },
+    container: {
+        padding: '12px 8px',
+        textAlign: 'center',
+        cursor: 'pointer',
+    },
+    image: {
+        width: 64
+    },
+    text: {
+        fontSize: 14,
+        fontWeight: 600, // Bolder font
+        fontFamily: 'inherit'
+    }
+}));
+
+const NavBar = () => {
+    const classes = useStyle();
+    return (
+        <Box className={classes.component}>
+            {
+                navData.map(data => (
+                    <Box className={classes.container} key={data.text}>
+                        <img src={data.url} className={classes.image} alt={data.text} />
+                        <Typography className={classes.text}>{data.text}</Typography>
+                    </Box>
+                ))
+            }
+        </Box>
+    )
+}
+
+export default NavBar;
+</file>
+
+<file path="client/src/Components/Home.jsx">
+import { Box, makeStyles } from '@material-ui/core';
+import { useHistory } from 'react-router-dom';
+import NavBar from './Home/NarBar'; // Corrected import name
+import Banner from './Home/Banner';
+import MidSlide from './Home/MidSlide';
+import MidSection from './Home/MidSection';
+import Slide from './Home/Slide';
+import React, { useEffect } from 'react';
+import { useSelector, useDispatch } from 'react-redux'; // hooks
+import { getProducts as listProducts } from '../redux/actions/productActions';
+import CategoryMenu from "./Home/CategoryMenu";
+
+// --- UI ENHANCEMENT: Styles updated for new layout and background color ---
+const useStyle = makeStyles({
+    // This wrapper is the new top-level container after the header
+    homeWrapper: {
+        marginTop: 55, // Clears the fixed header
+    },
+    // This component now only controls the main content area below the nav
+    component: {
+        padding: 10,
+        background: '#F1F3F6' // This is the light grey background color from Flipkart
+    }
+});
+
+const Home = () => {
+    const classes = useStyle();
+
+    // --- All your existing logic is preserved ---
+    const getProducts = useSelector(state => state.getProducts);
+    const { products } = getProducts;
+
+    const dispatch = useDispatch();
+    const history = useHistory();
+
+    const handleCategoryClick = (cat) => {
+        history.push(`/search?q=${encodeURIComponent(cat)}`);
+    };
+
+    useEffect(() => {
+        dispatch(listProducts())
+    }, [dispatch]);
+
+    return (
+        // --- UI ENHANCEMENT: The Fragment <> is replaced with the new wrapper Box ---
+        <Box className={classes.homeWrapper}> 
+            <NavBar />
+            {/* 
+              Note: The original Flipkart doesn't have a second category menu here.
+              You can choose to keep or remove this based on your desired UI.
+              I'm keeping it as you had it.
+            */}
+            <CategoryMenu onCategoryClick={handleCategoryClick} />
+            
+            <Box className={classes.component}>
+                <Banner />
+                <MidSlide products={products} />
+                <MidSection />
+                <Slide
+                    data={products} 
+                    title='Discounts for You'
+                    timer={false} 
+                    multi={true} 
+                />
+                <Slide
+                    data={products} 
+                    title='Suggested Items'
+                    timer={false} 
+                    multi={true} 
+                />
+                <Slide
+                    data={products} 
+                    title='Top Selection'
+                    timer={false} 
+                    multi={true} 
+                />
+                <Slide
+                    data={products} 
+                    title='Recommended Items'
+                    timer={false} 
+                    multi={true} 
+                />
+            </Box>
+        </Box>
+    )
+}
+
+export default Home;
+</file>
+
+<file path="server/database/db.js">
+import mongoose from 'mongoose';
+import dotenv from 'dotenv';
+
+// This ensures your .env file is read
+dotenv.config();
+
+const Connection = async () => {
+    const password = process.env.DB_PASSWORD;
+    const userName=process.env.DB_USERNAME;
+    // This is the correct connection string you got from the Atlas website
+    const URL = `mongodb+srv://${userName}:${password}@cluster0.mwn1mjt.mongodb.net/flipkart?retryWrites=true&w=majority&appName=Cluster0`;
+
+    try {
+        // Connect without the old, unnecessary options
+        await mongoose.connect(URL);
+        
+        console.log('Database Connected Successfully');
+    } catch(error) {
+        console.log('Error: ', error.message);
+    }
+};
+
+export default Connection;
 </file>
 
 <file path="server/model/categorySchema.js">
@@ -4735,6 +4362,391 @@ class SearchService:
             metadatas=metadatas
         )
         logger.info("Products added successfully.")
+</file>
+
+<file path="SRP/scripts/Example.py">
+import pandas as pd
+import sys
+from pathlib import Path
+import subprocess # To call our other script
+
+# Add project root to path to import utils
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+
+from scripts.utils import append_product_to_csv
+from app.core.config import PRODUCT_DATA_PATH
+
+def main():
+    """
+    Demonstrates the full workflow of adding a new product.
+    1. Defines a new product.
+    2. Appends it to the master CSV.
+    3. Calls the script to index it via the API.
+    """
+    print("--- Starting New Product Addition Workflow ---")
+
+    # --- 1. Define the New Product Data ---
+    # Let's add a new, high-end laptop. The PID should be unique.
+    new_laptop = {
+        'product_url': 'https://www.flipkart.com/lenovo-legion-7i-intel-core-i7-10th-gen-10875h-16-gb-1-tb-ssd-windows-10-home-8-gb-graphics-nvidia-geforce-rtx-2080-super-max-q-81yu0029in-gaming-laptop/p/itm48b72e2122ecd',
+        'product_name': 'Lenovo Legion 7i Intel Core i7 10th Gen 10875H - (16 GB/1 TB SSD/Windows 10 Home/8 GB Graphics/NVIDIA GeForce RTX 2080 Super Max-Q) 81YU0029IN Gaming Laptop  (15.6 inch, Slate Grey, 2.25 kg, With MS Office)',
+        'product_category_tree': 'Home > Computers > Laptops > Lenovo Laptops',
+        'pid': 'COMFTPG2HYSS9TW3', # Our unique Product ID
+        'retail_price': '₹2,79,890',
+        'discounted_price': '₹2,79,890',
+        'image': 'https://rukminim2.flixcart.com/image/416/416/kdyus280/computer/t/w/3/lenovo-na-gaming-laptop-original-imafuqwpncg3bzhx.jpeg?q=70&crop=false',
+        'description': 'If gaming is your favorite activity, then you need the Lenovo Legion 7i 15IMHg05 Gaming Laptop for on-the-move gaming. This gaming laptop features a 39.62 cm (15.6) FHD IPS Display with the Dolby Vision HDR and 100% AdobeRGB color gamut for rich and detailed visuals. Also, for a lag-free gaming experience, it is powered by a 10th Gen Intel Core processor and 16 GB of RAM. To top it off, you will get a one-month subscription to the Xbox Game Pass on the purchase of this laptop, so you can access over 100 high-quality PC games on Windows 10 devices.',
+        'product_rating': '3.5',
+        'brand': 'Lenovo',
+        'product_specifications': "[{'key': 'Sales Package', 'value': 'Laptop, Power Adaptor, User Guide, Warranty Documents'}, {'key': 'Model Number', 'value': '81YU0029IN'}, {'key': 'Part Number', 'value': '81YU002AIN'}, {'key': 'Series', 'value': 'Legion 7i'}, {'key': 'Color', 'value': 'Slate Grey'}, {'key': 'Type', 'value': 'Gaming Laptop'}, {'key': 'Suitable For', 'value': 'Gaming'}, {'key': 'Battery Backup', 'value': 'Upto 6 hours'}, {'key': 'Power Supply', 'value': '230 W AC Adapter'}, {'key': 'MS Office Provided', 'value': 'Yes'}, {'key': 'Dedicated Graphic Memory Type', 'value': 'GDDR6'}, {'key': 'Dedicated Graphic Memory Capacity', 'value': '8 GB'}, {'key': 'Processor Brand', 'value': 'Intel'}, {'key': 'Processor Name', 'value': 'Core i7'}, {'key': 'Processor Generation', 'value': '10th Gen'}, {'key': 'SSD', 'value': 'Yes'}, {'key': 'SSD Capacity', 'value': '1 TB'}, {'key': 'RAM', 'value': '16 GB'}, {'key': 'RAM Type', 'value': 'DDR4'}, {'key': 'Processor Variant', 'value': '10875H'}, {'key': 'Chipset', 'value': 'Intel HM470'}, {'key': 'Clock Speed', 'value': '2.3 GHz with Turbo Boost Upto 5.1 GHz'}, {'key': 'Memory Slots', 'value': '2 Slots'}, {'key': 'Expandable Memory', 'value': 'Upto 32 GB'}, {'key': 'RAM Frequency', 'value': '3200 MHz'}, {'key': 'Cache', 'value': '16 MB'}, {'key': 'Graphic Processor', 'value': 'NVIDIA GeForce RTX 2080 Super Max-Q'}, {'key': 'Number of Cores', 'value': '8'}, {'key': 'Storage Type', 'value': 'SSD'}, {'key': 'OS Architecture', 'value': '64 bit'}, {'key': 'Operating System', 'value': 'Windows 10 Home'}, {'key': 'System Architecture', 'value': '64 bit'}, {'key': 'Mic In', 'value': 'Yes'}, {'key': 'RJ45', 'value': 'Yes'}, {'key': 'USB Port', 'value': '1 x USB 3.1 ((1st Gen) (Always On)), 2 x USB 3.1 (2nd Gen), 1 x USB 3.1 Type C ((1st Gen) (with the Function of Display 1.4)), 1 x USB 3.1 Type C (2nd Gen) / Thunderbolt 3 (with the Function of DP 1.4)'}, {'key': 'HDMI Port', 'value': '1 x HDMI Port (v2.0)'}, {'key': 'Touchscreen', 'value': 'No'}, {'key': 'Screen Size', 'value': '39.62 cm (15.6 inch)'}, {'key': 'Screen Resolution', 'value': '1920 x 1080 Pixel'}, {'key': 'Screen Type', 'value': 'Full HD LED Backlit Anti-glare WVA Display (16:9 Aspect Ratio, 500 nits Brightness, 144 Hz Refresh Rate, 100% Adobe RGB Gamut, HDR400, Dolby Vision, G-Sync Support)'}, {'key': 'Speakers', 'value': 'Built-in Dual Speakers'}, {'key': 'Internal Mic', 'value': 'Dual Array Microphone'}, {'key': 'Sound Properties', 'value': '2 x 2 W Stereo Speakers with Dolby Atoms'}, {'key': 'Wireless LAN', 'value': 'IEEE 802.11ax (Wi-Fi 6)'}, {'key': 'Bluetooth', 'value': 'v5.0'}, {'key': 'Ethernet', 'value': '100/1000 Mbps'}, {'key': 'Dimensions', 'value': '359.34 x 259.04 x 19.9 mm'}, {'key': 'Weight', 'value': '2.25 kg'}, {'key': 'Disk Drive', 'value': 'Not Available'}, {'key': 'Web Camera', 'value': '720P HD Webcam'}, {'key': 'Finger Print Sensor', 'value': 'No'}, {'key': 'Security Chip', 'value': 'TPM 2.0'}, {'key': 'Keyboard', 'value': 'English RGB LED Backlit Keyboard'}, {'key': 'Backlit Keyboard', 'value': 'Yes'}, {'key': 'Pointer Device', 'value': 'Multi-touch Touchpad'}, {'key': 'Included Software', 'value': 'Microsoft Office Home and Student 2019'}, {'key': 'Additional Features', 'value': '80 WHr Li-ion Battery'}, {'key': 'Warranty Summary', 'value': '3 Years Warranty + 1 Year Legion Ultimate Support + 1 Year ADP'}, {'key': 'Warranty Service Type', 'value': 'Onsite'}, {'key': 'Covered in Warranty', 'value': '(1) Manufacturer’s warranty against faulty workmanship or defective parts; (2) ADP-Single repair once in year against all Liquid spills, unintentional bump and drops, electric surge, cracks on screen; (3) Gamer centric support 24x7 on call support, Software support in case of HDD failure'}, {'key': 'Not Covered in Warranty', 'value': '(1) Any kind of physical damage including electrical surge; (2) No software coverage in warranty; (3) Premium Care & ADP- Not covered in case of Theft, fire, rain, flood and part alteration'}, {'key': 'Domestic Warranty', 'value': '3 Year'}]",
+        'category': 'Computers',
+        'subcategory': 'Laptops'
+    }
+    print(f"\nStep 1: Defined new product with PID: '{new_laptop['pid']}'")
+
+    # --- 2. Append the New Product to the Master CSV ---
+    print(f"\nStep 2: Appending new product to '{PRODUCT_DATA_PATH.name}'...")
+    try:
+        append_product_to_csv(new_laptop)
+    except Exception as e:
+        print(f"  ERROR: Failed to append to CSV. Reason: {e}")
+        return
+
+    # --- 3. Call the `add_new_product.py` Script to Index via API ---
+    print("\nStep 3: Calling the API script to push the new product to the search index...")
+    
+    # We use subprocess to call our other script, passing the new PID as an argument.
+    # This simulates running it from the command line.
+    script_path = "scripts/add_new_product.py"
+    pid_to_add = new_laptop['pid']
+    
+    try:
+        # We run 'python' and then the script path and the argument.
+        # `check=True` will raise an error if the script fails.
+        # `capture_output=True` and `text=True` let us see the script's output.
+        result = subprocess.run(
+            [sys.executable, script_path, pid_to_add],
+            check=True,
+            capture_output=True,
+            text=True
+        )
+        print("  --- Output from add_new_product.py ---")
+        print(result.stdout)
+        if result.stderr:
+            print("  --- Errors from add_new_product.py ---")
+            print(result.stderr)
+        
+        print("\n--- Workflow Complete! ---")
+        print(f"Product '{pid_to_add}' has been added to the CSV and sent to the search index.")
+        print("You can now test searching for 'Aura Gaming Laptop' using the client script.")
+
+    except FileNotFoundError:
+        print(f"  ERROR: Could not find the script at '{script_path}'. Make sure you are in the project root.")
+    except subprocess.CalledProcessError as e:
+        print(f"  ERROR: The '{script_path}' script failed to execute.")
+        print("  --- Script Output (stdout) ---")
+        print(e.stdout)
+        print("  --- Script Errors (stderr) ---")
+        print(e.stderr)
+
+if __name__ == "__main__":
+    main()
+</file>
+
+<file path="SRP/Dockerfile">
+# Start with a slim, official Python 3.12 base image
+FROM python:3.12-slim
+
+# Set the working directory inside the container
+WORKDIR /app
+
+# Set environment variables for Python
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Install system dependencies that might be needed for some Python packages
+RUN apt-get update && apt-get install -y --no-install-recommends gcc
+
+# Copy the requirements file first to leverage Docker layer caching
+COPY requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir --upgrade pip
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the rest of your application code into the container
+COPY . .
+
+# Expose the port the app runs on
+EXPOSE 8000
+
+# The command to run your application
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+</file>
+
+<file path="SRP/test_client_with_k.py">
+import requests
+import pandas as pd
+import sys
+import time
+import textwrap
+import os
+from dotenv import load_dotenv
+
+# --- Configuration ---
+API_URL = "http://localhost:8001/api/search"
+load_dotenv()
+PRODUCT_DATA_FILE = os.getenv("PRODUCT_DATA_FILE")
+DATA_FILE_PATH = f"data/{PRODUCT_DATA_FILE}"
+DEFAULT_K = int(os.getenv("CLIENT_DISPLAY_COUNT", 5))
+
+def load_and_index_data(file_path):
+    """
+    Loads the product data from a CSV and sets 'pid' as the index for fast lookups.
+    Returns the indexed DataFrame or None if the file is not found.
+    """
+    try:
+        print(f"Loading and indexing data from '{file_path}'...")
+        df = pd.read_csv(file_path)
+        # Use 'pid' as the unique identifier and set it as the index. Clean the data.
+        df.dropna(subset=['pid', 'product_name', 'description'], inplace=True)
+        df.drop_duplicates(subset=['pid'], keep='first', inplace=True)
+
+        df_indexed = df.set_index('pid')
+        print("Data loaded and indexed successfully.")
+        return df_indexed
+    except FileNotFoundError:
+        print(f"ERROR: Data file not found at '{file_path}'.")
+        return None
+    except KeyError:
+        print(f"ERROR: The CSV file at '{file_path}' must contain a 'pid' column.")
+        return None
+
+def call_search_api(query):
+    """
+    Sends a search query to the API and returns the list of ranked PIDs.
+    """
+    print(f"\nSending query to API: '{query}'")
+    try:
+        start_time = time.time()
+        response = requests.post(API_URL, json={"query": query})
+        response.raise_for_status()  # Raise an exception for bad status codes (4xx or 5xx)
+        end_time = time.time()
+        
+        print(f"API response received in {end_time - start_time:.2f} seconds.")
+        return response.json().get('ranked_ids', [])
+    except requests.exceptions.RequestException as e:
+        print("\n--- API REQUEST FAILED ---")
+        print(f"Could not connect to the search API at {API_URL}.")
+        print("Please ensure the uvicorn server is running: `uvicorn app.main:app --reload`")
+        print(f"Error details: {e}")
+        return None
+
+def display_results(indexed_df, pids, k):
+    """
+    Fetches product details from the indexed DataFrame and displays the top K results.
+    """
+    if not pids:
+        print("\n--- No results found for your query. ---")
+        return
+
+    top_pids = pids[:k]
+    
+    # Use .loc for super-fast lookups from the indexed DataFrame
+    # We use reindex to handle cases where a PID might not be in the df, filling with NaN
+    results_df = indexed_df.reindex(top_pids)
+    
+    print("\n" + "="*50)
+    print(f"  Top {min(k, len(results_df))} Search Results")
+    print("="*50 + "\n")
+
+    for i, (pid, row) in enumerate(results_df.iterrows()):
+        if pd.isna(row['product_name']):
+            print(f"{i+1}. Product with PID '{pid}' not found in local data file.")
+            continue
+
+        # Use textwrap for clean description formatting
+        description = textwrap.shorten(str(row.get('description', 'No description available.')), width=100, placeholder="...")
+
+        print(f"{i+1}. {row['product_name']}")
+        print(f"   - PID:    {pid}")
+        print(f"   - Brand:  {row.get('brand', 'N/A')}")
+        print(f"   - Price:  ₹{row.get('discounted_price', 'N/A')}")
+        print(f"   - Rating: {row.get('product_rating', 'N/A')}")
+        print(f"   - Desc:   {description}\n")
+
+def main():
+    """
+    Main function to drive the client application.
+    """
+    product_df_indexed = load_and_index_data(DATA_FILE_PATH)
+    if product_df_indexed is None:
+        sys.exit(1)
+
+    while True:
+        # --- Get user input ---
+        query = input("Enter your search query (or 'quit' to exit): ")
+        if query.lower() == 'quit':
+            break
+        if not query:
+            print("Please enter a valid query.")
+            continue
+
+        try:
+            k_str = input(f"How many top results to display? (e.g., {DEFAULT_K}): ")
+            if not k_str:  # If user just presses Enter
+                k = DEFAULT_K
+            else:
+                k = int(k_str)
+            if k <= 0: raise ValueError
+        except (ValueError, TypeError):
+            print(f"Invalid number. Defaulting to {DEFAULT_K} results.")
+            k = DEFAULT_K
+
+        # --- Call API and display results ---
+        ranked_pids = call_search_api(query)
+        if ranked_pids is not None:
+            display_results(product_df_indexed, ranked_pids, k)
+
+if __name__ == "__main__":
+    main()
+</file>
+
+<file path=".gitignore">
+# Byte-compiled / optimized / C extensions
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+venv/
+env/
+.venv/
+*/venv/
+*/env/
+*/.venv/
+
+# IDE / Editor specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment variables
+.env
+.env.*
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+
+# Test artifacts
+.pytest_cache/
+.coverage
+
+#Non neccessary folders
+SRP/db_storage/
+</file>
+
+<file path="client/src/Components/Header/Profile.jsx">
+import { useState } from 'react';
+import { Box, Typography, Menu, MenuItem, makeStyles } from '@material-ui/core';
+import { PowerSettingsNew, AccountCircle, ExpandMore } from '@material-ui/icons';
+
+const useStyle = makeStyles(theme => ({
+    container: {
+        display: 'flex',
+        alignItems: 'center',
+        cursor: 'pointer',
+    },
+    menuComponent: {
+        marginTop: 40,
+    },
+    username: {
+        marginLeft: 8,
+        marginRight: 4,
+        fontWeight: 600,
+        fontSize: 14,
+    },
+    icon: {
+        color: '#fff',
+        [theme.breakpoints.down('sm')]: {
+          color: '#2874f0',
+        }
+    },
+    logout: {
+        fontSize: 14,
+        marginLeft: 20
+    }
+}));
+
+// --- ENHANCEMENT: Accept `logout` as a prop ---
+const Profile = ({ account, setAccount, logout, isHomePage }) => {
+    const [open, setOpen] = useState(false);
+    const classes = useStyle();
+    const profileColor = isHomePage ? '#000000' : '#FFFFFF';
+
+    const handleClick = (event) => {
+        setOpen(event.currentTarget);
+    };
+
+    const handleClose = () => {
+        setOpen(false);
+    };
+
+    // --- ENHANCEMENT: This handler now calls the passed-in logout function ---
+    const handleLogout = () => {
+        handleClose(); // First, close the menu
+        logout();      // Then, call the logout function from the context
+    };
+    
+    return (
+        <>
+            <Box onClick={handleClick} className={classes.container} style={{ color: profileColor }}>
+                <AccountCircle />
+                <Typography className={classes.username}>{account}</Typography>
+                <ExpandMore fontSize="small" />
+            </Box>
+
+            <Menu
+                anchorEl={open}
+                open={Boolean(open)}
+                onClose={handleClose}
+                className={classes.menuComponent}
+            >
+                {/* --- ENHANCEMENT: onClick now calls the clean handler function --- */}
+                <MenuItem onClick={handleLogout}>
+                    <PowerSettingsNew fontSize='small' color='primary'/> 
+                    <Typography className={classes.logout}>Logout</Typography>
+                </MenuItem>
+            </Menu>
+        </>
+    )    
+}
+
+export default Profile;
 </file>
 
 <file path="client/src/Components/SearchResults/SearchResultsPage.jsx">
@@ -5528,10 +5540,14 @@ services:
     ports:
       - "8001:8000"
     volumes:
+      - ./app:/app/app
+      - ./scripts:/app/scripts
       - chroma_db_data:/app/db_storage
       - ./data:/app/data  # <--- ADD THIS LINE
     restart: unless-stopped
     # The 'deploy' section for GPU has been completely removed.
+
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 volumes:
   chroma_db_data:
@@ -5703,6 +5719,15 @@ export const autosuggest = async (req, res) => {
     } catch (redisError) {
         console.error('Redis error in autosuggest:', redisError);
     }
+    const boostWords = new Set();
+    if (boostCategories.length > 0) {
+        boostCategories.forEach(cat => {
+            // Split phrases like "Men Formal Shoes" into individual words
+            cat.toLowerCase().split(' ').forEach(word => boostWords.add(word));
+        });
+        // Now boostWords might contain: {'men', 'formal', 'shoes', 'disney', 'casual'}
+    }
+
 
     try {
         // --- PRIMARY ELASTICSEARCH PATH ---
@@ -5785,7 +5810,19 @@ export const autosuggest = async (req, res) => {
                 let score = 0;
                 const targetCat = cat.subcategory || cat.name;
                 if (boostCategories.includes(targetCat)) score += 1000;
-                
+                if (boostWords.size > 0) {
+                    const candidateWords = nameLower.split(' ');
+                    let matchCount = 0;
+                    candidateWords.forEach(word => {
+                        if (boostWords.has(word)) {
+                            matchCount++;
+                        }
+                    });
+                    // Give a strong boost for each shared keyword found
+                    if (matchCount > 0) {
+                        score += 800 * matchCount;
+                    }
+                }
                 // These scores are intentionally higher than product scores to ensure they rank first
                 if (nameLower === query || nameLower === searchQuery) {
                     score += 2000; // Exact match is the best signal
@@ -6156,47 +6193,70 @@ After indexing, **restart the Node.js server (Terminal 1)** for it to create the
 <file path="client/src/Components/Header/Search.jsx">
 import { useState, useEffect, useRef, useContext } from 'react';
 import { InputBase, List, ListItem, Typography, makeStyles, Box } from '@material-ui/core';
-import SearchIcon from '@material-ui/icons/Search';
+import { Search as SearchIcon, History as HistoryIcon } from '@material-ui/icons';
 import { useHistory } from 'react-router-dom';
 import axios from 'axios';
 import DOMPurify from 'dompurify';
 import { LoginContext } from '../../context/ContextProvider';
 
-
 const useStyle = makeStyles(theme => ({
   search: {
-    borderRadius: 6,
-    marginLeft: 25,
-    width: '45%',
-    backgroundColor: '#fff',
+    borderRadius: 2,
+    marginLeft: 10,
+    width: '560px', // Using a fixed width to match Flipkart's stable layout
+    backgroundColor: '#f0f2f5',
     display: 'flex',
-    position: 'relative',
+    // --- THIS IS THE FIX ---
+    position: 'relative', // This makes the search bar the anchor for the dropdown
   },
-  searchIcon: {
-    marginLeft: 'auto',
-    padding: 5,
+  searchIconWrapper: {
+    padding: '5px 12px',
     display: 'flex',
-    color: 'blue',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: '#2874f0',
     cursor: 'pointer',
   },
-  inputRoot: { fontSize: 'unset', width: '100%' },
-  inputInput: { paddingLeft: 20, width: '100%' },
-  list: {
+  inputRoot: {
+    fontSize: '14px',
+    width: '100%'
+  },
+  inputInput: {
+    paddingLeft: 20,
+    width: '100%',
+  },
+  listWrapper: {
     position: 'absolute',
     color: '#000',
-    backgroundColor: '#fff',
-    marginTop: 36,
-    width: '100%',
+    background: '#fff',
+    top: 36, // Position it just below the search bar
+    width: '100%', // Now this is 100% of the search bar's width
     borderRadius: '0 0 2px 2px',
     boxShadow: '0 2px 4px 0 rgb(0 0 0 / 20%)',
-    maxHeight: 350,
-    overflowY: 'auto',
-    zIndex: 1000,
+    borderTop: '1px solid #e0e0e0'
   },
-  suggestionCategory: { fontWeight: 600, color: '#2874f0', paddingLeft: 12 },
-  suggestionType: { fontSize: 12, color: '#666', marginLeft: 8 },
+  listItem: {
+    padding: '10px 16px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    '&:hover': {
+      backgroundColor: '#f8f9fa'
+    }
+  },
+  suggestionText: {
+    fontSize: '14px',
+    color: '#212121',
+  },
+  suggestionType: {
+    fontSize: '12px',
+    color: '#878787',
+    marginLeft: 'auto'
+  },
+  icon: {
+    color: '#878787'
+  }
 }));
-
 
 const Search = () => {
   const classes = useStyle();
@@ -6206,8 +6266,7 @@ const Search = () => {
   const suggestionCache = useRef(new Map());
   const { account } = useContext(LoginContext);
 
-
-  // This useEffect block is unchanged and works correctly.
+  // --- All your existing logic is preserved ---
   useEffect(() => {
     if (!text) {
       setResults([]);
@@ -6222,112 +6281,63 @@ const Search = () => {
         const { data } = await axios.get(
           `http://localhost:8000/autosuggest?q=${encodeURIComponent(text)}${account ? `&userId=${encodeURIComponent(account)}` : ''}`
         );
-        const limitedResults = data.slice(0, 8);
-        setResults(limitedResults);
-        suggestionCache.current.set(text, limitedResults);
+        setResults(data.slice(0, 8));
+        suggestionCache.current.set(text, data.slice(0, 8));
       } catch (error) {
         console.error("Autosuggest API call failed:", error);
         setResults([]);
       }
     };
-    const timeoutId = setTimeout(fetchSuggestions, 400); // debounce
+    const timeoutId = setTimeout(fetchSuggestions, 400);
     return () => clearTimeout(timeoutId);
   }, [text, account]);
 
-
-  // This helper function is unchanged.
   const handleTextChange = e => setText(e.target.value);
-  
-  // --- DEFINITIVE FIX FOR THE "ENTER" KEY BEHAVIOR ---
-   const handleSearch = () => {
+  const clearSearch = () => { setText(''); setResults([]); };
+
+  const onSuggestionClick = async (suggestion) => {
+    if (suggestion.type === 'product') {
+      if (account && suggestion.id) {
+        try { await axios.post('http://localhost:8000/click', { userId: account, productId: suggestion.id }); }
+        catch (e) { console.error('Click tracking failed:', e); }
+      }
+      history.push(`/product/${suggestion.id}`);
+    } else {
+      let searchTarget = '';
+      let displayQuery = '';
+      if (suggestion.type === 'search_term') {
+        searchTarget = suggestion.subcategory;
+        displayQuery = suggestion.name;
+      } else {
+        searchTarget = suggestion.name;
+        displayQuery = suggestion.name;
+      }
+      if (searchTarget && account) {
+        try { await axios.post('http://localhost:8000/click', { userId: account, category: searchTarget }); }
+        catch (e) { console.error('Category/Term click tracking failed:', e); }
+      }
+      history.push(`/search?q=${encodeURIComponent(searchTarget)}&oq=${encodeURIComponent(displayQuery)}`);
+    }
+    clearSearch();
+  };
+
+  const handleSearch = () => {
     const query = text.trim();
     if (!query) return;
-
     const topSuggestion = results?.[0];
-
-    // If the top suggestion is a PRODUCT, extract the corrected keyword for the SEARCH,
-    // but keep the user's original text for DISPLAY.
     if (topSuggestion && topSuggestion.type === 'product' && topSuggestion.title?.longTitle) {
-      
       const highlightedHTML = topSuggestion.title.longTitle;
       const match = highlightedHTML.match(/<strong>(.*?)<\/strong>/i);
       const correctedKeyword = match ? match[1] : query;
-
-      // The key change is here: `oq` is set to the user's text (`query`)
       history.push(`/search?q=${encodeURIComponent(correctedKeyword)}&oq=${encodeURIComponent(query)}`);
-      
-    // If the top suggestion is a category/term, the existing logic is already correct
-    // because onSuggestionClick sets `oq` to the name of the suggestion.
     } else if (topSuggestion && topSuggestion.type !== 'product') {
       onSuggestionClick(topSuggestion);
-    
-    // Fallback: If no suggestions, search for the raw text.
     } else {
       history.push(`/search?q=${encodeURIComponent(query)}&oq=${encodeURIComponent(query)}`);
     }
     clearSearch();
   };
 
-  const clearSearch = () => {
-    setText('');
-    setResults([]);
-  };
-
-  // This onSuggestionClick function is preserved exactly as it was.
-  // It correctly handles MOUSE CLICKS on all suggestion types.
-  const onSuggestionClick = async suggestion => {
-    console.log('Suggestion clicked:', suggestion);
-
-    if (suggestion.type === 'product') {
-        if (account && suggestion.id) {
-            try {
-                await axios.post('http://localhost:8000/click', {
-                    userId: account,
-                    productId: suggestion.id
-                });
-                console.log('Product click tracked successfully');
-            } catch (e) {
-                console.error('Click tracking failed:', e.response?.data || e.message);
-            }
-        } else if (!account) {
-            console.warn('User not logged in - Skipping click tracking');
-        }
-        history.push(`/product/${suggestion.id}`);
-        clearSearch();
-        return;
-    }
-
-    let searchTarget = '';
-    let displayQuery = '';
-
-    if (suggestion.type === 'category' || suggestion.type === 'subcategory') {
-        searchTarget = suggestion.name;
-        displayQuery = suggestion.name;
-    } else if (suggestion.type === 'search_term') {
-        searchTarget = suggestion.subcategory;
-        displayQuery = suggestion.name;
-    }
-
-    if (searchTarget && account) {
-        try {
-            await axios.post('http://localhost:8000/click', {
-                userId: account,
-                category: searchTarget 
-            });
-            console.log(`Category/Term click tracked for: ${searchTarget}`);
-        } catch (e) {
-            console.error('Category/Term click tracking failed:', e);
-        }
-    }
-
-    if (searchTarget) {
-        history.push(`/search?q=${encodeURIComponent(searchTarget)}&oq=${encodeURIComponent(displayQuery)}`);
-    }
-    
-    clearSearch();
-  };
-
-  // The rendering logic is preserved exactly as you provided.
   return (
     <Box className={classes.search}>
       <InputBase
@@ -6336,58 +6346,46 @@ const Search = () => {
         value={text}
         onChange={handleTextChange}
         onKeyDown={e => { if (e.key === 'Enter') handleSearch(); }}
-        inputProps={{ 'aria-label': 'search' }}
       />
-      <Box className={classes.searchIcon} onClick={handleSearch}><SearchIcon /></Box>
+      <Box className={classes.searchIconWrapper} onClick={handleSearch}><SearchIcon /></Box>
+      
       {results.length > 0 && (
-        <List className={classes.list}>
+        <List className={classes.listWrapper}>
           {results.map((suggestion, index) => (
             <ListItem
               button
-              key={`${suggestion.type}-${suggestion.name || suggestion.id}-${index}`}
+              key={`${suggestion.type}-${index}`}
               onClick={() => onSuggestionClick(suggestion)}
+              className={classes.listItem}
             >
               {suggestion.type === 'product' ? (
-                <Box>
-                  <span dangerouslySetInnerHTML={{
-                    __html: DOMPurify.sanitize(suggestion.title.longTitle)
-                  }} />
-                  <Typography
-                    variant="body2"
-                    style={{ marginLeft: 10, color: '#888', display: 'inline' }}
-                  >
+                <>
+                  <SearchIcon className={classes.icon} />
+                  <Typography className={classes.suggestionText}>
+                    {suggestion.title.longTitle.replace(/<[^>]+>/g, '')}
+                  </Typography>
+                  <Typography className={classes.suggestionType}>
                     {suggestion.title.shortTitle}
                   </Typography>
-                </Box>
-              ) : suggestion.type === 'search_term' ? (
-                <span className={classes.suggestionCategory}>
-                  {suggestion.name}
-                  <span className={classes.suggestionType}>in {suggestion.subcategory}</span>
-                </span>
-              ) : suggestion.type === 'subcategory' ? (
-                <span className={classes.suggestionCategory}>
-                  {suggestion.name}
-                  <span className={classes.suggestionType}>in Subcategory</span>
-                </span>
-              ) : suggestion.type === 'category' ? (
-                 <span className={classes.suggestionCategory}>
-                  {suggestion.name}
-                  <span className={classes.suggestionType}>in Category</span>
-                </span>
-              ) : null}
+                </>
+              ) : (
+                <>
+                  <HistoryIcon className={classes.icon} />
+                  <Typography className={classes.suggestionText}>
+                    {suggestion.name}
+                  </Typography>
+                  <Typography className={classes.suggestionType}>
+                    in {suggestion.type === 'search_term' ? suggestion.subcategory : suggestion.type}
+                  </Typography>
+                </>
+              )}
             </ListItem>
           ))}
-          <ListItem disabled>
-            <Typography variant="body2">
-              View all results for "{text}"
-            </Typography>
-          </ListItem>
         </List>
       )}
     </Box>
   );
 };
-
 
 export default Search;
 </file>
