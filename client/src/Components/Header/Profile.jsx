@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Box, Typography, Menu, MenuItem, makeStyles } from '@material-ui/core';
 import { PowerSettingsNew, AccountCircle, ExpandMore } from '@material-ui/icons';
 
-// --- ENHANCEMENT: New styles to match Flipkart's UI ---
 const useStyle = makeStyles(theme => ({
     container: {
         display: 'flex',
@@ -17,10 +16,6 @@ const useStyle = makeStyles(theme => ({
         marginRight: 4,
         fontWeight: 600,
         fontSize: 14,
-        color: '#fff', // Ensure text is white
-        [theme.breakpoints.down('sm')]: {
-          color: '#2874f0', // Change color for mobile drawer view if needed
-        }
     },
     icon: {
         color: '#fff',
@@ -34,9 +29,11 @@ const useStyle = makeStyles(theme => ({
     }
 }));
 
-const Profile = ({ account, setAccount }) => {
+// --- ENHANCEMENT: Accept `logout` as a prop ---
+const Profile = ({ account, setAccount, logout, isHomePage }) => {
     const [open, setOpen] = useState(false);
     const classes = useStyle();
+    const profileColor = isHomePage ? '#000000' : '#FFFFFF';
 
     const handleClick = (event) => {
         setOpen(event.currentTarget);
@@ -46,20 +43,18 @@ const Profile = ({ account, setAccount }) => {
         setOpen(false);
     };
 
-    const logout = () => {
-        setAccount('');
-        // Also clear from local storage for consistency
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+    // --- ENHANCEMENT: This handler now calls the passed-in logout function ---
+    const handleLogout = () => {
+        handleClose(); // First, close the menu
+        logout();      // Then, call the logout function from the context
     };
     
     return (
         <>
-            {/* --- ENHANCEMENT: Replaced simple text with Icon -> Name -> Arrow structure --- */}
-            <Box onClick={handleClick} className={classes.container}>
-                <AccountCircle className={classes.icon} />
+            <Box onClick={handleClick} className={classes.container} style={{ color: profileColor }}>
+                <AccountCircle />
                 <Typography className={classes.username}>{account}</Typography>
-                <ExpandMore className={classes.icon} fontSize="small" />
+                <ExpandMore fontSize="small" />
             </Box>
 
             <Menu
@@ -68,7 +63,8 @@ const Profile = ({ account, setAccount }) => {
                 onClose={handleClose}
                 className={classes.menuComponent}
             >
-                <MenuItem onClick={() => { handleClose(); logout();}}>
+                {/* --- ENHANCEMENT: onClick now calls the clean handler function --- */}
+                <MenuItem onClick={handleLogout}>
                     <PowerSettingsNew fontSize='small' color='primary'/> 
                     <Typography className={classes.logout}>Logout</Typography>
                 </MenuItem>

@@ -6,8 +6,9 @@ dotenv.config();
 
 const Connection = async () => {
     const password = process.env.DB_PASSWORD;
+    const userName=process.env.DB_USERNAME;
     // This is the correct connection string you got from the Atlas website
-    const URL = `mongodb+srv://yashanand37:${password}@cluster0.mwn1mjt.mongodb.net/flipkart?retryWrites=true&w=majority&appName=Cluster0`;
+    const URL = `mongodb+srv://${userName}:${password}@cluster0.mwn1mjt.mongodb.net/flipkart?retryWrites=true&w=majority&appName=Cluster0`;
 
     try {
         // Connect without the old, unnecessary options

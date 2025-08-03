@@ -1,26 +1,30 @@
 import { Box, makeStyles, Typography } from '@material-ui/core';
 import { navData } from '../../constant/data';
 
+// --- UI ENHANCEMENT: Styles completely overhauled to match Flipkart's UI ---
 const useStyle = makeStyles(theme => ({
     component: {
         display: 'flex',
         justifyContent: 'space-between',
-        margin: '55px 130px 0 130px',
-        overflowX: 'overlay',
+        margin: '0 64px', // Add horizontal margin
+        overflowX: 'auto', // Allow scrolling on small screens
+        background: '#fff', // White background
+        padding: '12px 8px',
         [theme.breakpoints.down('md')]: {
             margin: 0
         }
     },
     container: {
         padding: '12px 8px',
-        textAlign: 'center'
+        textAlign: 'center',
+        cursor: 'pointer',
     },
     image: {
         width: 64
     },
     text: {
         fontSize: 14,
-        fontWeight: 600,
+        fontWeight: 600, // Bolder font
         fontFamily: 'inherit'
     }
 }));
@@ -30,10 +34,10 @@ const NavBar = () => {
     return (
         <Box className={classes.component}>
             {
-                navData.map(temp => (
-                    <Box className={classes.container}>
-                        <img src={temp.url} className={classes.image} alt="" />
-                        <Typography className={classes.text}>{temp.text}</Typography>
+                navData.map(data => (
+                    <Box className={classes.container} key={data.text}>
+                        <img src={data.url} className={classes.image} alt={data.text} />
+                        <Typography className={classes.text}>{data.text}</Typography>
                     </Box>
                 ))
             }
