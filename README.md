@@ -1,4 +1,3 @@
-
 # Flipkart Grid Search: AI-Powered Semantic Search Engine 🚀
 
 ![Status](https://img.shields.io/badge/status-production_ready-green)
