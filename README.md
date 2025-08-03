@@ -147,10 +147,12 @@ This is a multi-service application. The easiest way to run it is with four sepa
 *   Docker & Docker Compose (or a local ChromaDB install)
 
 ### Step 1: Clone the Repository & Configure
-
+---
 ```bash
-git clone https://github.com/your-username/flipkart-grid-search.git
-cd flipkart-grid-search
+git clone https://github.com/Darkcaptain007/Grid-Flipkart.git
+cd Grid-Flipkart
+or
+cd Grid-Flipkart-main
 
 # Create the .env file for the Node server
 cp server/.env.example server/.env
@@ -158,8 +160,8 @@ cp server/.env.example server/.env
 ```
 
 ### Step 2: Run the Services
-
-Open two terminals, for this step.
+---
+Open two terminals for this step.
 
 **➡️ Terminal 1: Start Elasticsearch via Docker**
 ```bash
@@ -168,7 +170,7 @@ docker run -p 9200:9200 -p 9300:9300 \
   -e "xpack.security.enabled=false" \
   docker.elastic.co/elasticsearch/elasticsearch:8.14.1
 ```
-*Wait for this to show a success message before proceeding.
+Wait for this to show a success message before proceeding.
 
 **➡️ Terminal 2: Start Redis via Docker**
 
@@ -176,39 +178,39 @@ docker run -p 9200:9200 -p 9300:9300 \
 docker run -p 6379:6379 redis
 ```
 
-*This will start and run in the foreground.
----
+This will start and run in the foreground.
 
 ### Step 3: Run the Application Services
-
-Open three more terminals for your application code.
+---
+Open four more terminals for your application code.
 
 **➡️ Terminal 3: Start the SRP Microservice (Python)**
-```bash
-From the root directory, open terminal and run these commands (Make sure your docker engine is running before it):
 
+From the root directory, open terminal and run these commands:
+
+```bash
 cd SRP
 docker-compose up --build
-
 ```
 
-*When the terminal show output like
+When the terminal show output like
 ```bash
 Attaching to flipkart_srp_api                    
 flipkart_srp_api  | INFO:     Started server process [8]                                                        
 flipkart_srp_api  | INFO:     Waiting for application startup.
 flipkart_srp_api  | INFO:     Application startup complete.
 ```
+then open another terminal and run the below command.
 
-*then run the below commands
+**➡️ Terminal 4: For Bulk Indexing**
+
 ```bash
-
 cd SRP
 docker-compose exec srp_api python scripts/bulk_indexer.py
 ```
+Wait for this message *--- Bulk Indexing Complete for all collections! ---*
 
-
-**➡️ Terminal 4: Start the Frontend (React)**
+**➡️ Terminal 5: Start the Frontend (React)**
 ```bash
 cd client
 npm install
@@ -216,7 +218,7 @@ npm start
 ```
 *Your application will be available at `http://localhost:3000`.*
 
-**➡️ Terminal 5: Index Your Data (One-Time Setup)**
+**➡️ Terminal 6: Index Your Data (One-Time Setup)**
 This step is **critical** and populates your databases. Run these commands from the project root.
 ```bash
 # 1. Populate MongoDB with product data
@@ -224,13 +226,8 @@ This step is **critical** and populates your databases. Run these commands from 
 
 # 2. Populate MongoDB with category & search term data
 (cd server && node importCategories.js)
-(cd server && node importSearchTerms.js)
-
-# 3. Populate ChromaDB (Vector DB) for the SRP
-# Ensure you are in the SRP virtual environment first!
-(cd SRP && source venv/bin/activate && python scripts/bulk_indexer.py)
 ```
-After indexing, **restart the Node.js server (Terminal 1)** for it to create the Elasticsearch indices with the new data.
+After doing this, **restart the Node.js server (Terminal 1)** for it to create the Elasticsearch indices with the new data.
 
 **You are all set!** Open `http://localhost:3000` and experience the search.
 
