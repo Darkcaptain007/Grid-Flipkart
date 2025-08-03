@@ -216,7 +216,7 @@ cd client
 npm install
 npm start
 ```
-*Your application will be available at `http://localhost:3000`.*
+*Your application will be available at `http://localhost:8000`.*
 
 **➡️ Terminal 6: Index Your Data (One-Time Setup)**
 This step is **critical** and populates your databases. Run these commands from the project root.
@@ -229,7 +229,7 @@ This step is **critical** and populates your databases. Run these commands from 
 ```
 After doing this, **restart the Node.js server (Terminal 1)** for it to create the Elasticsearch indices with the new data.
 
-**You are all set!** Open `http://localhost:3000` and experience the search.
+**You are all set!** Open `http://localhost:8000` and experience the search.
 
 -----
 
