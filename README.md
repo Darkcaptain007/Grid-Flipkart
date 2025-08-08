@@ -305,3 +305,6 @@ After doing this, **restart the Node.js server (Terminal 1)** for it to create t
 | **Autosuggest Engine**     | <img src='https://www.vectorlogo.zone/logos/elastic/elastic-icon.svg' width='20' /> Elasticsearch        | Provides lightning-fast, prefix-based search for the autosuggest dropdown.         |
 
 
+## 🎥 Tech Stack Walkthrough (Live Demo)
+
+Watch the [YouTube](https://www.youtube.com/watch?v=baw8FdGVHKs&feature=youtu.be) demo here.
